@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sports Results</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .header {
+      background-color: #E30613;
+      color: white;
+      text-align: center;
+      padding: 10px 0;
+      font-size: 24px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .section {
+      border: 4px solid #E30613;
+      margin: 20px;
+      padding: 20px;
+    }
+
+    .title {
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .event {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    .result-box {
+      display: flex;
+      justify-content: space-between;
+      background-color: #FDE9E9;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+    }
+
+    .result-box .name {
+      font-weight: bold;
+    }
+
+    .result-box .timing {
+      text-align: right;
+    }
+
+    .highlight {
+      color: #E30613;
+      font-weight: bold;
+    }
+
+    .flag {
+      width: 30px;
+      height: 20px;
+      margin: 0 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">RESULTS</div>
+
+  <!-- Non-Head-to-Head Sports -->
+  <div class="section">
+    <div class="title">Swimming</div>
+
+    <div class="subtitle">Boys</div>
+    <div class="event">200m Butterfly (Heats)</div>
+    <div class="result-box">
+      <div class="name">Lim Zhequan Lawrence</div>
+      <div class="timing">2:09.91<br>9th out of 27</div>
+    </div>
+    <div class="result-box">
+      <div class="name">Julian Lee Xing Hong</div>
+      <div class="timing">2:12.91<br>15th out of 27</div>
+    </div>
+
+    <div class="subtitle">Girls</div>
+    <div class="event">50m Breaststroke (Heats)</div>
+    <div class="result-box">
+      <div class="name">Neo Joy Ning Suan <span class="highlight">PB</span></div>
+      <div class="timing">34.71<br>13th out of 33</div>
+    </div>
+    <div class="result-box">
+      <div class="name">Chew En Vivienne</div>
+      <div class="timing">34.77<br>15th out of 33</div>
+    </div>
+  </div>
+
+  <!-- Head-to-Head Sports -->
+  <div class="section">
+    <div class="title">Table Tennis</div>
+
+    <div class="subtitle">Girls</div>
+    <div class="event">Singles (Round of 16)</div>
+    <div class="result-box">
+      <div>
+        <img class="flag" src="singapore-flag.png" alt="Singapore"> Loy Ming Ying
+      </div>
+      <div>
+        3<br>-<br>1
+      </div>
+      <div>
+        Mak Ming <img class="flag" src="hong-kong-flag.png" alt="Hong Kong">
+      </div>
+    </div>
+  </div>
+</body>
+</html>
