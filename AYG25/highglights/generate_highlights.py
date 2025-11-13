@@ -411,6 +411,390 @@ class HighlightsGenerator:
             else:
                 return " | ".join(parts)
     
+    def build_result_cards(self, group_key, highlights):
+        """
+        Prepare the list of card dictionaries for rendering.
+        Includes sample placeholders only if no highlights are available.
+        """
+        cards = []
+        
+        for highlight in highlights:
+            card = self._card_from_highlight(highlight, len(cards) + 1, group_key)
+            cards.append(card)
+        
+        if not cards:
+            sample_cards = self._example_cards()
+            for idx, example in enumerate(sample_cards, start=1):
+                card_copy = dict(example)
+                card_copy['index'] = idx
+                cards.append(card_copy)
+        
+        return cards
+    
+    def chunk_cards(self, cards, chunk_size=6):
+        """Split cards into fixed-size chunks for carousel slides."""
+        if chunk_size <= 0:
+            return [cards]
+        
+        slides = []
+        for i in range(0, len(cards), chunk_size):
+            slides.append(cards[i:i + chunk_size])
+        
+        if not slides:
+            slides.append([])
+        
+        return slides
+    
+    def _card_from_highlight(self, highlight, index, group_key=None):
+        """Build a single card dictionary from a highlight entry."""
+        sport = (highlight.get('sport') or group_key or 'Sport Name').strip() or 'Sport Name'
+        athletes = (highlight.get('athlete_name') or highlight.get('athletes') or '').strip()
+        if not athletes and highlight.get('type') == 'h2h':
+            athletes = f"{(highlight.get('athlete_name') or 'Athlete Name').strip()} vs {(highlight.get('competitor_name') or 'Opponent Name').strip()}"
+        if not athletes:
+            athletes = "Athlete or Team Name"
+        
+        event = (highlight.get('event') or '').strip()
+        stage = (highlight.get('stage') or '').strip()
+        event_details_parts = [part for part in [event, stage] if part]
+        event_details = " · ".join(event_details_parts) if event_details_parts else "Event Details"
+        
+        score_sgp = (highlight.get('score_sgp') or '').strip()
+        score_competitor = (highlight.get('score_competitor') or '').strip()
+        timing = (highlight.get('timing_sgp') or '').strip()
+        medals = (highlight.get('medals') or '').strip()
+        
+        primary_score = ""
+        opponent_score = ""
+        if score_sgp and score_competitor:
+            primary_score = score_sgp
+            opponent_score = score_competitor
+        elif score_sgp:
+            primary_score = score_sgp
+        elif timing:
+            primary_score = timing
+        
+        result_summary = (highlight.get('highlights_text') or '').strip()
+        if not result_summary:
+            result_parts = []
+            if primary_score and opponent_score:
+                result_parts.append(f"{primary_score} - {opponent_score}")
+            elif primary_score:
+                result_parts.append(primary_score)
+            if medals:
+                result_parts.append(medals)
+            result_summary = " | ".join(result_parts) if result_parts else "Result summary will appear here."
+        
+        medal_label, medal_icon = self._normalize_medal(medals)
+        
+        competitors = []
+        primary_name = (highlight.get('athlete_name') or '').strip() or "Athlete Name"
+        primary_country = (highlight.get('country_sgp') or 'SGP').strip() or 'SGP'
+        def resolve_flag(country_value):
+            if not country_value:
+                return ''
+            country = str(country_value).strip()
+            if not country:
+                return ''
+            upper = country.upper()
+            flag_map = {
+                'SGP': '🇸🇬', 'SINGAPORE': '🇸🇬',
+                'MAS': '🇲🇾', 'MALAYSIA': '🇲🇾',
+                'THA': '🇹🇭', 'THAILAND': '🇹🇭',
+                'PHI': '🇵🇭', 'PHILIPPINES': '🇵🇭',
+                'VIE': '🇻🇳', 'VIETNAM': '🇻🇳',
+                'INA': '🇮🇩', 'INDONESIA': '🇮🇩',
+                'MYA': '🇲🇲', 'MYANMAR': '🇲🇲',
+                'CAM': '🇰🇭', 'CAMBODIA': '🇰🇭',
+                'LAO': '🇱🇦', 'LAOS': '🇱🇦',
+                'BRU': '🇧🇳', 'BRUNEI': '🇧🇳',
+                'TLS': '🇹🇱', 'TIMOR-LESTE': '🇹🇱',
+                'CHN': '🇨🇳', 'CHINA': '🇨🇳',
+                'JPN': '🇯🇵', 'JAPAN': '🇯🇵',
+                'KOR': '🇰🇷', 'SOUTH KOREA': '🇰🇷', 'KOREA': '🇰🇷',
+                'HKG': '🇭🇰', 'HONG KONG': '🇭🇰',
+                'TPE': '🇹🇼', 'TAIWAN': '🇹🇼',
+                'IND': '🇮🇳', 'INDIA': '🇮🇳',
+                'AUS': '🇦🇺', 'AUSTRALIA': '🇦🇺',
+                'NZL': '🇳🇿', 'NEW ZEALAND': '🇳🇿',
+                'USA': '🇺🇸', 'UNITED STATES': '🇺🇸',
+                'GBR': '🇬🇧', 'UNITED KINGDOM': '🇬🇧', 'UK': '🇬🇧',
+                'FRA': '🇫🇷', 'FRANCE': '🇫🇷',
+                'GER': '🇩🇪', 'GERMANY': '🇩🇪',
+                'ITA': '🇮🇹', 'ITALY': '🇮🇹',
+                'ESP': '🇪🇸', 'SPAIN': '🇪🇸',
+                'MGL': '🇲🇳', 'MONGOLIA': '🇲🇳',
+                'KAZ': '🇰🇿', 'KAZAKHSTAN': '🇰🇿',
+            }
+            if upper in flag_map:
+                return flag_map[upper]
+            for key, icon in flag_map.items():
+                if upper in key or key in upper:
+                    return icon
+            return ''
+        
+        competitors.append({
+            'flag_src': '#',
+            'flag_alt': f"{primary_country} flag placeholder",
+            'flag_icon': resolve_flag(primary_country),
+            'name': primary_name,
+            'country': primary_country,
+            'score': primary_score
+        })
+        
+        opponent_name = (highlight.get('competitor_name') or '').strip()
+        opponent_country = (highlight.get('competitor_country') or '').strip()
+        if opponent_name or opponent_country or opponent_score:
+            competitors.append({
+                'flag_src': '#',
+                'flag_alt': f"{opponent_country or 'Opponent'} flag placeholder",
+                'flag_icon': resolve_flag(opponent_country),
+                'name': opponent_name or "Opponent Name",
+                'country': opponent_country or "Opponent Country",
+                'score': opponent_score
+            })
+        
+        sport_tags = highlight.get('sport_tags') or ['#OneTeamOneDream', '#GoTeamSG']
+        result_badge = (highlight.get('win_draw_lose') or '').strip()
+        if not result_badge and medal_label:
+            result_badge = medal_label
+        
+        if result_badge.lower() in ('na', 'n/a', 'none'):
+            result_badge = ''
+        
+        card = {
+            'index': index,
+            'sport': sport,
+            'sport_icon': highlight.get('sport_icon') or '🏅',
+            'sport_tags': sport_tags,
+            'medal_label': medal_label,
+            'medal_icon': medal_icon if medal_label else '',
+            'athletes': athletes,
+            'event_details': event_details,
+            'result_summary': result_summary,
+            'result_badge': result_badge,
+            'competitors': competitors
+        }
+        
+        return card
+    
+    def _placeholder_card(self, index):
+        """Return placeholder card content."""
+        return {
+            'index': index,
+            'sport': "Sport Name",
+            'sport_icon': '🏅',
+            'sport_tags': ['#OneTeamOneDream', '#GoTeamSG'],
+            'medal_label': "",
+            'medal_icon': "",
+            'athletes': "Athlete or Team Name",
+            'event_details': "Event Details",
+            'result_summary': "Result information will appear here.",
+            'result_badge': "",
+            'competitors': [
+                {
+                    'flag_src': '#',
+                    'flag_alt': "Flag placeholder",
+                    'name': "Competitor Name",
+                    'country': "Country",
+                    'score': "15"
+                },
+                {
+                    'flag_src': '#',
+                    'flag_alt': "Flag placeholder",
+                    'name': "Opponent Name",
+                    'country': "Opponent Country",
+                    'score': "8"
+                }
+            ]
+        }
+    
+    def _normalize_medal(self, medal_value):
+        """Return medal label and icon based on medal text."""
+        if not medal_value:
+            return "", ""
+        
+        medal_text = str(medal_value).strip()
+        if not medal_text:
+            return "", ""
+        
+        medal_key = medal_text.lower()
+        if medal_key in ('na', 'n/a', 'none', 'no medal', 'nil'):
+            return "", ""
+        
+        for keyword, icon in (('gold', '🥇'), ('silver', '🥈'), ('bronze', '🥉')):
+            if keyword in medal_key:
+                return medal_text.title(), icon
+        
+        return "", ""
+    
+    def _example_cards(self):
+        """Provide example cards to populate the grid when no data is available."""
+        example_cards = [
+            {
+                'index': 1,
+                'sport': "Jiu-Jitsu",
+                'sport_icon': '🥋',
+                'sport_tags': ['#OneTeamOneDream', '#SEA2025', '#APG2026'],
+                'medal_label': "Gold Medal",
+                'medal_icon': '🥇',
+                'athletes': "Nur Hanifah Qisya Mohammad Hanis",
+                'event_details': "Girls' 52kg Final",
+                'result_summary': "SGP beat THA 15-8. SGP won the Gold Medal.",
+                'result_badge': "Gold Medal",
+                'competitors': [
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Singapore flag placeholder",
+                        'name': "Nur Hanifah Qisya Mohammad Hanis",
+                        'country': "SGP",
+                        'score': "15"
+                    },
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Thailand flag placeholder",
+                        'name': "Thailand Athlete",
+                        'country': "THA",
+                        'score': "8"
+                    }
+                ]
+            },
+            {
+                'index': 2,
+                'sport': "Swimming",
+                'sport_icon': '🏊‍♀️',
+                'sport_tags': ['#OneTeamOneDream', '#SEA2025', '#APG2026'],
+                'medal_label': "Gold Medal",
+                'medal_icon': '🥇',
+                'athletes': "Ashley Wong · Chew En Vivienne · Keira Chew · Yo Ee Xin Megan Janice",
+                'event_details': "Girls' 400m Breaststroke Finals",
+                'result_summary': "Time: 4:05.75. Finished 1st out of 15 overall. SGP won the Gold Medal.",
+                'result_badge': "Gold Medal",
+                'competitors': [
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Singapore flag placeholder",
+                        'name': "Team Singapore",
+                        'country': "SGP",
+                        'score': "4:05.75"
+                    }
+                ]
+            },
+            {
+                'index': 3,
+                'sport': "Table Tennis",
+                'sport_icon': '🏓',
+                'sport_tags': ['#OneTeamOneDream', '#SEA2025', '#APG2026'],
+                'medal_label': "",
+                'medal_icon': "",
+                'athletes': "Loy Ming Ying",
+                'event_details': "Singles · Round of 16",
+                'result_summary': "SGP beat HKG 3-1.",
+                'result_badge': "3-1 Win",
+                'competitors': [
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Singapore flag placeholder",
+                        'name': "Loy Ming Ying",
+                        'country': "SGP",
+                        'score': "3"
+                    },
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Hong Kong flag placeholder",
+                        'name': "Hong Kong Opponent",
+                        'country': "HKG",
+                        'score': "1"
+                    }
+                ]
+            },
+            {
+                'index': 4,
+                'sport': "Jiu-Jitsu",
+                'sport_icon': '🥋',
+                'sport_tags': ['#OneTeamOneDream', '#SEA2025', '#APG2026'],
+                'medal_label': "",
+                'medal_icon': "",
+                'athletes': "Sofia Anabel Rivas",
+                'event_details': "Girls' 52kg Final",
+                'result_summary': "SGP won by 3 to 1 advantages.",
+                'result_badge': "3-1 Advantages",
+                'competitors': [
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Singapore flag placeholder",
+                        'name': "Sofia Anabel Rivas",
+                        'country': "SGP",
+                        'score': "3"
+                    },
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Opponent flag placeholder",
+                        'name': "Opponent Athlete",
+                        'country': "Opponent Country",
+                        'score': "1"
+                    }
+                ]
+            },
+            {
+                'index': 5,
+                'sport': "Athletics",
+                'sport_icon': '🏃‍♀️',
+                'sport_tags': ['#OneTeamOneDream', '#SEA2025', '#APG2026'],
+                'medal_label': "",
+                'medal_icon': "",
+                'athletes': "Team Singapore",
+                'event_details': "Girls' 4x100m Relay Finals",
+                'result_summary': "Time: 46.82s. Season best finish for Team Singapore.",
+                'result_badge': "Season Best",
+                'competitors': [
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Singapore flag placeholder",
+                        'name': "Team Singapore",
+                        'country': "SGP",
+                        'score': "46.82"
+                    },
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Opponent flag placeholder",
+                        'name': "Opposition Team",
+                        'country': "Opponent Country",
+                        'score': "47.10"
+                    }
+                ]
+            },
+            {
+                'index': 6,
+                'sport': "Basketball",
+                'sport_icon': '🏀',
+                'sport_tags': ['#OneTeamOneDream', '#SEA2025', '#APG2026'],
+                'medal_label': "",
+                'medal_icon': "",
+                'athletes': "Singapore U17 Girls",
+                'event_details': "3x3 Quarterfinal",
+                'result_summary': "SGP beat PHI 21-18 to reach the semifinals.",
+                'result_badge': "21-18 Win",
+                'competitors': [
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Singapore flag placeholder",
+                        'name': "Singapore U17 Girls",
+                        'country': "SGP",
+                        'score': "21"
+                    },
+                    {
+                        'flag_src': '#',
+                        'flag_alt': "Philippines flag placeholder",
+                        'name': "Philippines U17",
+                        'country': "PHI",
+                        'score': "18"
+                    }
+                ]
+            }
+        ]
+        return example_cards
+    
     def group_highlights(self, df):
         """
         Group highlights data by date or sport (based on config)
@@ -473,7 +857,8 @@ class HighlightsGenerator:
     
     def generate_html(self, group_key, highlights):
         """
-        Generate HTML page for highlights grouped by date or sport
+        Generate HTML section for results grouped by date or sport.
+        Produces a responsive 2x4 grid of result cards.
         
         Args:
             group_key: Date or sport name
@@ -482,186 +867,28 @@ class HighlightsGenerator:
         Returns:
             HTML string
         """
-        # Load HTML template
         template_path = Path(__file__).parent / 'templates' / 'highlights_template.html'
         
-        # Load template
-        if not template_path.exists():
-            logger.warning(f"Template not found at {template_path}, using default template")
-            html_template = self.get_default_template()
-        else:
+        if template_path.exists():
             with open(template_path, 'r', encoding='utf-8') as f:
                 template_content = f.read()
                 html_template = Template(template_content)
-        
-        # Separate H2H and non-H2H highlights
-        h2h_highlights = [h for h in highlights if h['type'] == 'h2h']
-        non_h2h_highlights = [h for h in highlights if h['type'] == 'non-h2h']
-        
-        # Group highlights by sport and gender for template
-        def group_by_sport_gender(highlight_list):
-            """Group highlights by sport and gender"""
-            groups = {}
-            for h in highlight_list:
-                sport = h.get('sport', 'Unknown')
-                gender = h.get('event_gender', 'Mixed')
-                key = f"{sport}|{gender}"
-                
-                if key not in groups:
-                    groups[key] = {
-                        'sport': sport,
-                        'gender': gender,
-                        'highlights': []
-                    }
-                groups[key]['highlights'].append(h)
-            
-            # Group each sport's highlights by event
-            for key, group in groups.items():
-                events = {}
-                for h in group['highlights']:
-                    event = h.get('event', 'Unknown')
-                    stage = h.get('stage', '')
-                    event_key = f"{event}|{stage}"
-                    
-                    if event_key not in events:
-                        events[event_key] = {
-                            'event': event,
-                            'stage': stage,
-                            'highlights': []
-                        }
-                    events[event_key]['highlights'].append(h)
-                
-                group['events'] = list(events.values())
-            
-            return list(groups.values())
-        
-        h2h_groups = group_by_sport_gender(h2h_highlights)
-        non_h2h_groups = group_by_sport_gender(non_h2h_highlights)
-        
-        # Combine groups into sections that fit within 1080px
-        # Header is 60px, padding is 40px, so we have ~980px for content
-        def estimate_group_height(group):
-            """Estimate the height needed for a group"""
-            num_events = len(group.get('events', []))
-            # Sport title: 36.88px
-            # Gender subtitle: ~30px (estimated, with margin-bottom: 20px)
-            # Spacing between sections: ~20px
-            # Each event-column: 160.12px (includes event title + all highlights in that column)
-            # Events are arranged in a grid with minmax(350px, 1fr), so with 1920px width,
-            # we can fit approximately 5 columns (1920 / 350 ≈ 5.5, so max 5 columns)
-            # Grid has gap: 20px between items, and margin-bottom: 20px on events-row
-            # Calculate number of rows: ceil(num_events / 5)
-            sport_title_height = 36.88
-            gender_subtitle_height = 30 + 20  # Subtitle + margin-bottom
-            spacing_height = 20  # Margin between sport sections
-            event_column_height = 160.12
-            grid_gap = 20  # Gap between grid items
-            events_row_margin = 20  # margin-bottom on events-row
-            max_columns = 5  # Based on minmax(350px, 1fr) in 1920px width
-            num_rows = (num_events + max_columns - 1) // max_columns  # Ceiling division
-            
-            base_height = sport_title_height + gender_subtitle_height + spacing_height
-            # For grid rows: (num_rows - 1) gaps between rows + events_row_margin for last row
-            grid_spacing = (num_rows - 1) * grid_gap if num_rows > 1 else 0
-            events_height = (num_rows * event_column_height) + grid_spacing + events_row_margin
-            
-            # Add safety margin of 5% to account for any variations
-            total_height = (base_height + events_height) * 1.05
-            
-            return total_height
-        
-        # Combine all groups into sections
-        all_groups = []
-        for group in non_h2h_groups:
-            all_groups.append({'type': 'non_h2h', 'group': group})
-        for group in h2h_groups:
-            all_groups.append({'type': 'h2h', 'group': group})
-        
-        # Group into sections that fit within 1080px
-        sections = []
-        current_section = []
-        current_height = 60  # Header height
-        
-        for group_data in all_groups:
-            group = group_data['group']
-            estimated_height = estimate_group_height(group)
-            
-            logger.debug(f"Group: {group.get('sport', 'Unknown')} - {group.get('gender', 'Unknown')}, "
-                       f"Events: {len(group.get('events', []))}, "
-                       f"Estimated height: {estimated_height:.2f}px, "
-                       f"Current section height: {current_height:.2f}px, "
-                       f"Would be: {current_height + estimated_height:.2f}px")
-            
-            # If adding this group would exceed 1080px, start a new section
-            # Use a conservative threshold of 950px to leave buffer for padding and variations
-            # Header is 60px, so we have ~1020px for content, but use 950px as safe limit
-            if current_height + estimated_height > 950 and current_section:
-                logger.debug(f"Starting new section. Previous section had {len(current_section)} groups")
-                sections.append(current_section)
-                current_section = []
-                current_height = 60  # Reset to header height
-            
-            current_section.append(group_data)
-            current_height += estimated_height
-        
-        # Add the last section if it has content
-        if current_section:
-            sections.append(current_section)
-        
-        # Check if next section has only 1 column total, merge it into previous section
-        merged_sections = []
-        i = 0
-        while i < len(sections):
-            current_section = sections[i]
-            
-            # Check if this section has only 1 group with 1 event (1 column total)
-            if len(current_section) == 1:
-                group_data = current_section[0]
-                group = group_data['group']
-                num_events = len(group.get('events', []))
-                
-                if num_events == 1:
-                    # Check if we can merge with previous section
-                    if merged_sections:
-                        prev_section = merged_sections[-1]
-                        # Estimate if adding this 1-column group would fit
-                        # Calculate total height: header (60px) + sum of all group heights
-                        estimated_height = estimate_group_height(group)
-                        prev_height = 60  # Header height
-                        prev_height += sum(estimate_group_height(g['group']) for g in prev_section)
-                        
-                        if prev_height + estimated_height <= 950:
-                            # Merge into previous section
-                            prev_section.append(group_data)
-                            logger.debug(f"Merged 1-column section into previous section. New height: {prev_height + estimated_height:.2f}px")
-                            i += 1
-                            continue
-            
-            # Keep section as is
-            merged_sections.append(current_section)
-            i += 1
-        
-        sections = merged_sections
-        
-        # Determine title based on grouping mode
-        if GROUP_BY_DATE:
-            title = f"Highlights - {group_key}"
-            subtitle = "AYG25 Competition Results"
         else:
-            title = f"{group_key} Highlights"
-            subtitle = "AYG25 Competition Results"
+            html_template = self.get_default_template()
         
-        # Render template
+        cards = self.build_result_cards(group_key, highlights)
+        slides = self.chunk_cards(cards, chunk_size=6)
+        
+        subtitle = "AYG25 Competition Results"
+        if group_key and not GROUP_BY_DATE:
+            subtitle = f"{group_key} Competition Results"
+        
         html_content = html_template.render(
-            sport=group_key,
-            title=title,
+            section_title="Results",
             subtitle=subtitle,
-            sections=sections,
-            h2h_groups=h2h_groups,
-            non_h2h_groups=non_h2h_groups,
-            h2h_highlights=h2h_highlights,
-            non_h2h_highlights=non_h2h_highlights,
-            all_highlights=highlights,
+            group_label=group_key,
+            cards=cards,
+            slides=slides,
             generation_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
         
@@ -675,102 +902,351 @@ class HighlightsGenerator:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ sport }} - Highlights</title>
+    <title>{{ section_title }} | {{ group_label or 'AYG25' }}</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        :root {
+            color-scheme: light;
+        }
+        body {
+            margin: 0;
+            padding: 48px;
+            background: #f4f4f8;
+            font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+            color: #1f1f1f;
+        }
+        .results-section {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+        .results-header {
+            margin-bottom: 32px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .results-title {
+            margin: 0;
+            font-size: 36px;
+            font-weight: 700;
+            color: #bd1e2d;
+        }
+        .results-subtitle {
+            margin: 8px 0 0;
+            font-size: 14px;
+            color: #4a4a4a;
+        }
+        .results-generated {
+            margin: 6px 0 0;
+            font-size: 12px;
+            color: #6d6d6d;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(280px, 1fr));
+            gap: 28px;
+        }
+        .result-card {
+            display: flex;
+            min-height: 265px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            position: relative;
+        }
+        .card-side {
+            width: 140px;
+            background: linear-gradient(180deg, #d9382c 0%, #ba1b27 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px 20px;
+        }
+        .side-top {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .sport-icon {
+            font-size: 36px;
+            line-height: 1;
+        }
+        .side-label {
+            margin: 0;
+            font-size: 12px;
+            letter-spacing: 0.18em;
+            opacity: 0.7;
+        }
+        .side-sport {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .side-bottom {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .side-tag {
+            font-size: 11px;
+            text-transform: uppercase;
+            opacity: 0.85;
+        }
+        .card-main {
+            flex: 1;
+            padding: 26px 28px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .medal-ribbon {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 92px;
+            background: linear-gradient(180deg, #f8d047 0%, #f2a800 100%);
+            color: #6a3600;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+        }
+        .medal-ribbon::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            width: 0;
+            height: 0;
+            border-left: 32px solid transparent;
+            border-right: 32px solid transparent;
+            border-top: 12px solid #f2a800;
+        }
+        .medal-ribbon.muted {
+            background: linear-gradient(180deg, #d3d3d3 0%, #adadad 100%);
+            color: #ffffff;
+        }
+        .medal-symbol {
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 72px;
+        }
+        .card-sport {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #111;
+        }
+        .card-athletes {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: #ba1b27;
+        }
+        .card-event {
+            margin: 0;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #4b4b4b;
+        }
+        .card-scoreboard {
+            border-radius: 12px;
+            background: #f9f9fb;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .score-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .score-row[data-role="primary"] {
+            font-weight: 700;
+        }
+        .score-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .flag-circle {
+            width: 42px;
+            height: 28px;
+            border-radius: 6px;
+            background: #ffffff;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .flag-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .flag-placeholder {
+            display: inline-block;
+            width: 60%;
+            height: 60%;
+            border-radius: 50%;
+            background: #d3d3d3;
+        }
+        .score-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .competitor-name {
+            font-size: 13px;
+            color: #1b1b1b;
+        }
+        .competitor-country {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #7a7a7a;
+        }
+        .score-value {
+            font-size: 20px;
+            font-weight: 700;
+            min-width: 36px;
+            text-align: right;
+            color: #0f172a;
+        }
+        .card-result {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .result-badge {
+            align-self: flex-start;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #ba1b27;
+            color: #fff;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        @media (max-width: 1280px) {
+            .results-grid {
+                grid-template-columns: repeat(3, minmax(260px, 1fr));
+            }
+        }
+        @media (max-width: 1024px) {
+            body {
+                padding: 32px;
+            }
+            .results-grid {
+                grid-template-columns: repeat(2, minmax(260px, 1fr));
+            }
+        }
+        @media (max-width: 640px) {
+            body {
+                padding: 24px 16px;
+            }
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            .result-card {
+                flex-direction: column;
+            }
+            .card-side {
+                flex-direction: row;
+                align-items: center;
+                width: 100%;
+                gap: 20px;
+                padding: 20px;
+            }
+            .card-main {
+                padding: 24px 20px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>{{ sport }} Highlights</h1>
-            <p class="subtitle">AYG25 Competition Results</p>
-            <p class="generated">Generated: {{ generation_date }}</p>
+    <section class="results-section" aria-labelledby="results-title">
+        <header class="results-header">
+            <h2 class="results-title" id="results-title">{{ section_title }}</h2>
+            <p class="results-subtitle">{{ subtitle }}</p>
+            <p class="results-generated">Generated: {{ generation_date }}</p>
         </header>
-        
-        {% if h2h_highlights %}
-        <section class="highlights-section h2h-section">
-            <h2>Head-to-Head Highlights</h2>
-            {% for highlight in h2h_highlights %}
-            <div class="highlight-card h2h-card">
-                <div class="highlight-header">
-                    <h3>{{ highlight.event }} - {{ highlight.stage }}</h3>
-                    {% if highlight.date_sgp %}
-                    <span class="date">{{ highlight.date_sgp }}</span>
-                    {% endif %}
-                </div>
-                <div class="highlight-content">
-                    <div class="athlete-info">
-                        <div class="athlete">
-                            <strong>{{ highlight.athlete_name }}</strong>
-                            <span class="country">({{ highlight.country_sgp }})</span>
+        <div class="results-grid" data-layout="2x4">
+            {% for card in cards %}
+            <article class="result-card" data-card-index="{{ card.index }}">
+                <aside class="card-side">
+                    <div class="side-top">
+                        <div class="sport-icon">{{ card.sport_icon }}</div>
+                        <p class="side-label">Sport</p>
+                        <h3 class="side-sport">{{ card.sport }}</h3>
+                    </div>
+                    <div class="side-bottom">
+                        {% for tag in card.sport_tags %}
+                        <span class="side-tag">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                </aside>
+                <div class="card-main">
+                    <div class="medal-ribbon{% if not card.medal_label %} muted{% endif %}">
+                        <span class="medal-symbol">{{ card.medal_icon }}</span>
+                        <span class="medal-text">{% if card.medal_label %}{{ card.medal_label }}{% else %}Result{% endif %}</span>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-sport">{{ card.sport }}</h4>
+                        <p class="card-athletes">{{ card.athletes }}</p>
+                        <p class="card-event">{{ card.event_details }}</p>
+                        <div class="card-scoreboard">
+                            {% for competitor in card.competitors %}
+                            <div class="score-row" data-role="{% if loop.index0 == 0 %}primary{% else %}opponent{% endif %}">
+                                <div class="score-info">
+                                    <div class="flag-circle">
+                                        {% if competitor.flag_src and competitor.flag_src != '#' %}
+                                        <img src="{{ competitor.flag_src }}" alt="{{ competitor.flag_alt }}" />
+                                        {% else %}
+                                        <span class="flag-placeholder"></span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="score-meta">
+                                        <span class="competitor-name">{{ competitor.name }}</span>
+                                        <span class="competitor-country">{{ competitor.country }}</span>
+                                    </div>
+                                </div>
+                                {% if competitor.score %}
+                                <span class="score-value">{{ competitor.score }}</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
                         </div>
-                        <div class="vs">VS</div>
-                        <div class="athlete">
-                            <strong>{{ highlight.competitor_name }}</strong>
-                            <span class="country">({{ highlight.competitor_country }})</span>
-                        </div>
-                    </div>
-                    <div class="result">
-                        {% if highlight.score_sgp and highlight.score_competitor %}
-                        <div class="score">{{ highlight.score_sgp }} - {{ highlight.score_competitor }}</div>
-                        {% elif highlight.timing_sgp %}
-                        <div class="timing">{{ highlight.timing_sgp }}</div>
-                        {% endif %}
-                        {% if highlight.win_draw_lose %}
-                        <div class="result-badge {{ highlight.win_draw_lose.lower() }}">{{ highlight.win_draw_lose }}</div>
+                        <p class="card-result">{{ card.result_summary }}</p>
+                        {% if card.result_badge %}
+                        <span class="result-badge">{{ card.result_badge }}</span>
                         {% endif %}
                     </div>
-                    <div class="highlights-text">{{ highlight.highlights_text }}</div>
-                    {% if highlight.medals %}
-                    <div class="medal-badge">{{ highlight.medals }}</div>
-                    {% endif %}
-                    {% if highlight.pb_nr %}
-                    <div class="record-badge">{{ highlight.pb_nr }}</div>
-                    {% endif %}
                 </div>
-            </div>
+            </article>
             {% endfor %}
-        </section>
-        {% endif %}
-        
-        {% if non_h2h_highlights %}
-        <section class="highlights-section non-h2h-section">
-            <h2>Individual Highlights</h2>
-            {% for highlight in non_h2h_highlights %}
-            <div class="highlight-card non-h2h-card">
-                <div class="highlight-header">
-                    <h3>{{ highlight.event }} - {{ highlight.stage }}</h3>
-                    {% if highlight.date_sgp %}
-                    <span class="date">{{ highlight.date_sgp }}</span>
-                    {% endif %}
-                </div>
-                <div class="highlight-content">
-                    <div class="athlete-info-single">
-                        <strong>{{ highlight.athlete_name }}</strong>
-                        <span class="country">({{ highlight.country_sgp }})</span>
-                    </div>
-                    <div class="result">
-                        {% if highlight.score_sgp %}
-                        <div class="score">{{ highlight.score_sgp }}</div>
-                        {% elif highlight.timing_sgp %}
-                        <div class="timing">{{ highlight.timing_sgp }}</div>
-                        {% endif %}
-                        {% if highlight.position and highlight.total_competitors %}
-                        <div class="position">Position: {{ highlight.position }}/{{ highlight.total_competitors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="highlights-text">{{ highlight.highlights_text }}</div>
-                    {% if highlight.medals %}
-                    <div class="medal-badge">{{ highlight.medals }}</div>
-                    {% endif %}
-                    {% if highlight.pb_nr %}
-                    <div class="record-badge">{{ highlight.pb_nr }}</div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </section>
-        {% endif %}
-    </div>
+        </div>
+    </section>
 </body>
 </html>
         """)
