@@ -215,13 +215,15 @@
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
         .score-row[data-role="primary"] { font-weight: 700; }
         .score-info {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex: 1;
+            min-width: 0;
         }
         .flag-circle {
             width: 42px;
@@ -259,12 +261,18 @@
             color: #7a7a7a;
         }
         .score-value {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
-            min-width: 32px;
+            min-width: 40px;
             text-align: right;
             color: #0f172a;
             margin-left: auto;
+            padding: 6px 14px;
+            border-radius: 12px;
+            background: #eef0f6;
+            flex-shrink: 0;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
         }
         .result-badge {
             align-self: flex-start;
@@ -331,7 +339,6 @@
                                 <div class="card-main">
                                     <div class="card-content">
                                         <h4 class="card-title">{{ card.event_details }}</h4>
-                                        <p class="card-athletes">{{ card.athletes }}</p>
                                         <div class="card-scoreboard">
                                             {% for competitor in card.competitors %}
                                             <div class="score-row" data-role="{% if loop.index0 == 0 %}primary{% else %}opponent{% endif %}">
