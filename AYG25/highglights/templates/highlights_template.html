@@ -19,10 +19,10 @@
             min-height: 100vh;
         }
         .results-canvas {
-            width: 1280px;
+            width: 1080px;
             height: 1920px;
             background: #f4f4f8;
-            padding: 36px 48px;
+            padding: 32px 40px;
             box-sizing: border-box;
             overflow-y: auto;
             border-radius: 28px;
@@ -56,8 +56,8 @@
         }
         .results-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(320px, 1fr));
-            gap: 28px;
+            grid-template-columns: repeat(3, minmax(300px, 1fr));
+            gap: 24px;
         }
         .results-carousel {
             position: relative;
@@ -313,8 +313,6 @@
         <section class="results-section" aria-labelledby="results-title">
             <header class="results-header">
                 <h2 class="results-title" id="results-title">{{ section_title }}</h2>
-                <p class="results-subtitle">{{ subtitle }}</p>
-                <p class="results-generated">Generated: {{ generation_date }}</p>
             </header>
             <div class="results-carousel" data-total-slides="{{ slides|length }}">
                 <div class="carousel-track" id="results-carousel-track">
@@ -344,10 +342,10 @@
                                             <div class="score-row" data-role="{% if loop.index0 == 0 %}primary{% else %}opponent{% endif %}">
                                                 <div class="score-info">
                                                     <div class="flag-circle">
-                                                        {% if competitor.flag_icon %}
+                                                        {% if competitor.flag_image %}
+                                                        <img src="{{ competitor.flag_image }}" alt="{{ competitor.flag_alt }}">
+                                                        {% elif competitor.flag_icon %}
                                                         <span class="flag-emoji" aria-hidden="true">{{ competitor.flag_icon }}</span>
-                                                        {% elif competitor.flag_src and competitor.flag_src != '#' %}
-                                                        <img src="{{ competitor.flag_src }}" alt="{{ competitor.flag_alt }}">
                                                         {% else %}
                                                         <span class="flag-placeholder"></span>
                                                         {% endif %}

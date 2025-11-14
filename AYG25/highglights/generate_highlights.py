@@ -533,9 +533,53 @@ class HighlightsGenerator:
                     return icon
             return ''
         
+        def resolve_flag_image(country_value):
+            flags_dir = Path(__file__).parent / "flags"
+            if not country_value:
+                return ""
+            country_clean = str(country_value).strip().upper()
+            if not country_clean:
+                return ""
+            mapping = {
+                "SGP": "SIN.png",
+                "SINGAPORE": "SIN.png",
+                "SIN": "SIN.png",
+                "THA": "THA.png",
+                "THAILAND": "THA.png",
+                "VIE": "VIE.png",
+                "VIETNAM": "VIE.png",
+                "INA": "INA.png",
+                "INDONESIA": "INA.png",
+                "MAS": "MAS.png",
+                "MALAYSIA": "MAS.png",
+                "PHI": "PHI.png",
+                "PHILIPPINES": "PHI.png",
+                "MYA": "MYA.png",
+                "MYANMAR": "MYA.png",
+                "LAO": "LAO.png",
+                "LAOS": "LAO.png",
+                "CAM": "CAM.png",
+                "CAMBODIA": "CAM.png",
+                "BRU": "BRU.jpg",
+                "BRUNEI": "BRU.jpg",
+                "TIMOR-LESTE": "TLS.png",
+            }
+            file_name = mapping.get(country_clean)
+            if file_name:
+                candidate = flags_dir / file_name
+                if candidate.exists():
+                    return f"flags/{file_name}"
+            # try using the country code directly
+            for suffix in (".png", ".jpg", ".jpeg"):
+                candidate = flags_dir / f"{country_clean}{suffix}"
+                if candidate.exists():
+                    return f"flags/{country_clean}{suffix}"
+            return ""
+        
         competitors.append({
             'flag_src': '#',
             'flag_alt': f"{primary_country} flag placeholder",
+            'flag_image': resolve_flag_image(primary_country),
             'flag_icon': resolve_flag(primary_country),
             'name': primary_name,
             'country': primary_country,
@@ -548,6 +592,7 @@ class HighlightsGenerator:
             competitors.append({
                 'flag_src': '#',
                 'flag_alt': f"{opponent_country or 'Opponent'} flag placeholder",
+                'flag_image': resolve_flag_image(opponent_country),
                 'flag_icon': resolve_flag(opponent_country),
                 'name': opponent_name or "Opponent Name",
                 'country': opponent_country or "Opponent Country",
