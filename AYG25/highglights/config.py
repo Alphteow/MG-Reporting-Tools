@@ -5,7 +5,7 @@ Configuration for Highlights Generator
 
 # Google Sheets Configuration
 GOOGLE_SPREADSHEET_ID = '1xzFo8qBtGGSqW9V9UyaPVGqT6w5UIypw9hIgV3JZmto'
-GOOGLE_SHEET_NAME = 'AYG2025 Competition Schedule'
+GOOGLE_SHEET_NAME = 'Sheet17'
 
 # Credentials file path (relative to highlights directory or absolute path)
 GOOGLE_CREDENTIALS_FILE = '../ayg-form-system/functions/google_credentials.json'

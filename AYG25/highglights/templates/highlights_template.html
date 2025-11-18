@@ -19,10 +19,10 @@
             min-height: 100vh;
         }
         .results-canvas {
-            width: 1080px;
-            height: 1920px;
+            width: 1920px;
+            height: 1080px;
             background: #f4f4f8;
-            padding: 32px 40px;
+            padding: 32px 48px;
             box-sizing: border-box;
             overflow-y: auto;
             border-radius: 28px;
@@ -74,34 +74,8 @@
             animation: fadeIn 200ms ease-in;
         }
         .carousel-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(189, 30, 45, 0.9);
-            color: #fff;
-            font-size: 28px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 8px 20px rgba(189, 30, 45, 0.35);
-            transition: transform 160ms ease, opacity 160ms ease;
+            display: none;
         }
-        .carousel-nav:hover {
-            transform: translateY(-50%) scale(1.05);
-        }
-        .carousel-nav:disabled {
-            opacity: 0.35;
-            cursor: not-allowed;
-            transform: translateY(-50%);
-        }
-        .carousel-nav.prev { left: -12px; }
-        .carousel-nav.next { right: -12px; }
         .carousel-dots {
             margin-top: 18px;
             display: flex;
@@ -137,18 +111,20 @@
         }
         .card-medal {
             position: absolute;
-            top: 16px;
-            right: 16px;
-            font-size: 26px;
+            top: 8px;
+            right: 12px;
+            font-size: 36px;
             filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.18));
+            z-index: 1;
         }
         .card-header {
             padding: 16px 22px;
-            background: linear-gradient(90deg, #d9382c 0%, #ba1b27 60%, #a51420 100%);
+            background: linear-gradient(90deg, #e85a4f 0%, #d9382c 60%, #c92a1f 100%);
             color: #fff;
             display: flex;
             flex-direction: column;
             gap: 8px;
+            position: relative;
         }
         .card-header-title {
             margin: 0;
@@ -235,6 +211,7 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            flex-shrink: 0;
         }
         .flag-circle img {
             width: 100%;
@@ -242,14 +219,16 @@
             object-fit: cover;
         }
         .flag-emoji {
-            font-size: 21px;
+            font-size: 24px;
             line-height: 1;
         }
         .flag-placeholder {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 28px;
+            border-radius: 6px;
             background: #d3d3d3;
         }
         .score-meta { display: flex; flex-direction: column; gap: 2px; }
@@ -318,25 +297,25 @@
                 <div class="carousel-track" id="results-carousel-track">
                     {% for slide in slides %}
                     <div class="carousel-slide{% if loop.first %} active{% endif %}" data-slide-index="{{ loop.index0 }}">
-                        <div class="results-grid" data-layout="2x3">
+                        <div class="results-grid" data-layout="3x3">
                             {% for card in slide %}
                             <article class="result-card" data-card-index="{{ card.index }}">
-                                {% if card.medal_label and card.medal_icon %}
-                                <div class="card-medal" aria-label="{{ card.medal_label }}">{{ card.medal_icon }}</div>
-                                {% endif %}
                                 <div class="card-header">
-                                    <h3 class="card-header-title">{{ card.sport }}</h3>
-                                    {% if card.sport_tags %}
-                                    <div class="card-tags">
-                                        {% for tag in card.sport_tags %}
-                                        <span class="card-tag">{{ tag }}</span>
-                                        {% endfor %}
-                                    </div>
+                                    {% if card.medal_label and card.medal_icon %}
+                                    <div class="card-medal" aria-label="{{ card.medal_label }}">{{ card.medal_icon }}</div>
                                     {% endif %}
+                                    <h3 class="card-header-title">{{ card.sport }}</h3>
                                 </div>
                                 <div class="card-main">
                                     <div class="card-content">
                                         <h4 class="card-title">{{ card.event_details }}</h4>
+                                        {% if card.is_tally_card %}
+                                        <div class="card-scoreboard" style="text-align: center; padding: 20px;">
+                                            <div style="font-size: 24px; font-weight: 700; color: #1b1b1b; line-height: 1.6;">
+                                                {{ card.result_summary }}
+                                            </div>
+                                        </div>
+                                        {% else %}
                                         <div class="card-scoreboard">
                                             {% for competitor in card.competitors %}
                                             <div class="score-row" data-role="{% if loop.index0 == 0 %}primary{% else %}opponent{% endif %}">
@@ -361,8 +340,6 @@
                                             </div>
                                             {% endfor %}
                                         </div>
-                                        {% if card.result_badge %}
-                                        <span class="result-badge">{{ card.result_badge }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -373,8 +350,6 @@
                     {% endfor %}
                 </div>
                 {% if slides|length > 1 %}
-                <button class="carousel-nav prev" id="results-carousel-prev" aria-label="Previous slide">‹</button>
-                <button class="carousel-nav next" id="results-carousel-next" aria-label="Next slide">›</button>
                 <div class="carousel-dots" id="results-carousel-dots">
                     {% for slide in slides %}
                     <button class="carousel-dot{% if loop.first %} active{% endif %}" data-slide="{{ loop.index0 }}" aria-label="Go to slide {{ loop.index }}"></button>
@@ -396,8 +371,6 @@
                 return;
             }
             let currentIndex = 0;
-            const prevBtn = document.getElementById('results-carousel-prev');
-            const nextBtn = document.getElementById('results-carousel-next');
             const dotsContainer = document.getElementById('results-carousel-dots');
             const dots = dotsContainer ? Array.from(dotsContainer.querySelectorAll('.carousel-dot')) : [];
             
@@ -409,12 +382,6 @@
                 slides[newIndex].classList.add('active');
                 currentIndex = newIndex;
                 
-                if (prevBtn) {
-                    prevBtn.disabled = currentIndex === 0;
-                }
-                if (nextBtn) {
-                    nextBtn.disabled = currentIndex === slides.length - 1;
-                }
                 if (dots.length) {
                     dots.forEach((dot, idx) => {
                         if (idx === currentIndex) {
@@ -426,14 +393,6 @@
                 }
             }
             
-            if (prevBtn) {
-                prevBtn.addEventListener('click', () => updateSlide(currentIndex - 1));
-                prevBtn.disabled = true;
-            }
-            if (nextBtn) {
-                nextBtn.addEventListener('click', () => updateSlide(currentIndex + 1));
-                nextBtn.disabled = slides.length <= 1;
-            }
             if (dots.length) {
                 dots.forEach(dot => {
                     dot.addEventListener('click', () => {

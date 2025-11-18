@@ -411,12 +411,67 @@ class HighlightsGenerator:
             else:
                 return " | ".join(parts)
     
+    def _create_medal_tally_card(self, highlights):
+        """Create a medal tally card showing total medals for the day."""
+        gold_count = 0
+        silver_count = 0
+        bronze_count = 0
+        
+        for highlight in highlights:
+            medals = (highlight.get('medals') or '').strip()
+            if not medals:
+                continue
+            medal_key = str(medals).lower()
+            if medal_key in ('na', 'n/a', 'none', 'no medal', 'nil'):
+                continue
+            if 'gold' in medal_key:
+                gold_count += 1
+            elif 'silver' in medal_key:
+                silver_count += 1
+            elif 'bronze' in medal_key:
+                bronze_count += 1
+        
+        total_medals = gold_count + silver_count + bronze_count
+        
+        # Only create tally card if there are medals
+        if total_medals == 0:
+            return None
+        
+        tally_text = []
+        if gold_count > 0:
+            tally_text.append(f"{gold_count} 🥇")
+        if silver_count > 0:
+            tally_text.append(f"{silver_count} 🥈")
+        if bronze_count > 0:
+            tally_text.append(f"{bronze_count} 🥉")
+        
+        return {
+            'index': 0,  # Will be re-indexed
+            'sport': 'MEDAL TALLY',
+            'sport_icon': '🏅',
+            'sport_tags': [],
+            'medal_label': '',
+            'medal_icon': '',
+            'athletes': '',
+            'event_details': f"Total: {total_medals} Medals",
+            'result_summary': ' | '.join(tally_text) if tally_text else 'No medals',
+            'result_badge': '',
+            'competitors': [],
+            'is_tally_card': True
+        }
+    
     def build_result_cards(self, group_key, highlights):
         """
         Prepare the list of card dictionaries for rendering.
         Includes sample placeholders only if no highlights are available.
         """
         cards = []
+        
+        # Create medal tally card as first card if there are highlights
+        if highlights:
+            tally_card = self._create_medal_tally_card(highlights)
+            if tally_card:
+                cards.append(tally_card)
         
         for highlight in highlights:
             card = self._card_from_highlight(highlight, len(cards) + 1, group_key)
@@ -428,6 +483,21 @@ class HighlightsGenerator:
                 card_copy = dict(example)
                 card_copy['index'] = idx
                 cards.append(card_copy)
+        
+        # Sort cards alphabetically by sport header, but keep tally card first
+        tally_card = None
+        if cards and cards[0].get('is_tally_card'):
+            tally_card = cards.pop(0)
+        
+        cards.sort(key=lambda x: x.get('sport', '').upper())
+        
+        # Re-insert tally card at the beginning
+        if tally_card:
+            cards.insert(0, tally_card)
+        
+        # Re-index cards after sorting
+        for idx, card in enumerate(cards, start=1):
+            card['index'] = idx
         
         return cards
     
@@ -448,6 +518,13 @@ class HighlightsGenerator:
     def _card_from_highlight(self, highlight, index, group_key=None):
         """Build a single card dictionary from a highlight entry."""
         sport = (highlight.get('sport') or group_key or 'Sport Name').strip() or 'Sport Name'
+        discipline = (highlight.get('discipline') or '').strip()
+        
+        # Format header as "SPORT - DISCIPLINE" if discipline exists and is different from sport, otherwise just "SPORT"
+        if discipline and discipline.upper() != sport.upper():
+            sport_header = f"{sport} - {discipline}"
+        else:
+            sport_header = sport
         athletes = (highlight.get('athlete_name') or highlight.get('athletes') or '').strip()
         if not athletes and highlight.get('type') == 'h2h':
             athletes = f"{(highlight.get('athlete_name') or 'Athlete Name').strip()} vs {(highlight.get('competitor_name') or 'Opponent Name').strip()}"
@@ -568,12 +645,12 @@ class HighlightsGenerator:
             if file_name:
                 candidate = flags_dir / file_name
                 if candidate.exists():
-                    return f"flags/{file_name}"
+                    return f"../flags/{file_name}"
             # try using the country code directly
             for suffix in (".png", ".jpg", ".jpeg"):
                 candidate = flags_dir / f"{country_clean}{suffix}"
                 if candidate.exists():
-                    return f"flags/{country_clean}{suffix}"
+                    return f"../flags/{country_clean}{suffix}"
             return ""
         
         competitors.append({
@@ -609,7 +686,7 @@ class HighlightsGenerator:
         
         card = {
             'index': index,
-            'sport': sport,
+            'sport': sport_header,
             'sport_icon': highlight.get('sport_icon') or '🏅',
             'sport_tags': sport_tags,
             'medal_label': medal_label,
@@ -922,7 +999,7 @@ class HighlightsGenerator:
             html_template = self.get_default_template()
         
         cards = self.build_result_cards(group_key, highlights)
-        slides = self.chunk_cards(cards, chunk_size=6)
+        slides = self.chunk_cards(cards, chunk_size=9)
         
         subtitle = "AYG25 Competition Results"
         if group_key and not GROUP_BY_DATE:
