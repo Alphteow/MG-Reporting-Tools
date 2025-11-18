@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Schedule - {{ date }}</title>
+    <style>
+        :root { color-scheme: light; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #e9e9ee;
+            font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+            color: #1f1f1f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .schedule-canvas {
+            width: 1920px;
+            height: 1080px;
+            background: #f4f4f8;
+            padding: 32px 48px;
+            box-sizing: border-box;
+            overflow: hidden;
+            border-radius: 28px;
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+        }
+        .schedule-section { max-width: 100%; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
+        .schedule-header {
+            margin-bottom: 24px;
+            padding: 20px 28px;
+            background: #bd1e2d;
+            color: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 24px rgba(189, 30, 45, 0.24);
+            flex-shrink: 0;
+        }
+        .schedule-title {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .schedule-carousel {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .carousel-track {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+        }
+        .carousel-slide {
+            display: none;
+            height: 100%;
+        }
+        .carousel-slide.active {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            animation: fadeIn 200ms ease-in;
+        }
+        .carousel-dots {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .carousel-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(189, 30, 45, 0.25);
+            border: none;
+            cursor: pointer;
+            transition: transform 160ms ease, background 160ms ease;
+        }
+        .carousel-dot.active {
+            background: #bd1e2d;
+            transform: scale(1.2);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .schedule-content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+        }
+        .sport-group {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .sport-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #bd1e2d;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-shrink: 0;
+        }
+        .timeline-items {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+        .timeline-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 10px;
+            padding: 3px 0;
+            line-height: 1.3;
+            flex-shrink: 0;
+        }
+        .timeline-time {
+            min-width: 42px;
+            font-weight: 700;
+            color: #4b4b4b;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+            font-size: 9px;
+        }
+        .timeline-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+        }
+        .timeline-event {
+            color: #1b1b1b;
+            font-weight: 600;
+            font-size: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .timeline-stage {
+            color: #666;
+            font-size: 9px;
+            font-weight: 400;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .timeline-athlete {
+            color: #1b1b1b;
+            font-weight: 500;
+            font-size: 9px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .timeline-athlete:empty::before {
+            content: "TBD";
+            color: #999;
+            font-style: italic;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7a7a7a;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="schedule-canvas">
+        <section class="schedule-section">
+            <header class="schedule-header">
+                <h1 class="schedule-title">Daily Schedule - {{ date }}</h1>
+            </header>
+            <div class="schedule-carousel" data-total-slides="{{ slides|length }}">
+                <div class="carousel-track" id="schedule-carousel-track">
+                    {% for slide in slides %}
+                    <div class="carousel-slide{% if loop.first %} active{% endif %}" data-slide-index="{{ loop.index0 }}">
+                        <div class="schedule-content">
+                            {% if slide %}
+                                {% for sport in slide %}
+                                <div class="sport-group">
+                                    <div class="sport-header">{{ sport }}</div>
+                                    <div class="timeline-items">
+                                        {% for item in grouped_items[sport] %}
+                                        <div class="timeline-item">
+                                            <span class="timeline-time">{{ item.time or 'TBD' }}</span>
+                                            <div class="timeline-details">
+                                                {% if item.event %}
+                                                <span class="timeline-event">{{ item.event }}</span>
+                                                {% endif %}
+                                                {% if item.stage %}
+                                                <span class="timeline-stage">{{ item.stage }}</span>
+                                                {% endif %}
+                                                {% if item.athlete %}
+                                                <span class="timeline-athlete">{{ item.athlete }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state" style="grid-column: 1 / -1;">
+                                    No events scheduled for this period.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if slides|length > 1 %}
+                <div class="carousel-dots" id="schedule-carousel-dots">
+                    {% for slide in slides %}
+                    <button class="carousel-dot{% if loop.first %} active{% endif %}" data-slide="{{ loop.index0 }}" aria-label="Go to slide {{ loop.index }}"></button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <script>
+        (function() {
+            const track = document.getElementById('schedule-carousel-track');
+            if (!track) {
+                return;
+            }
+            const slides = Array.from(track.querySelectorAll('.carousel-slide'));
+            if (!slides.length) {
+                return;
+            }
+            let currentIndex = 0;
+            const dotsContainer = document.getElementById('schedule-carousel-dots');
+            const dots = dotsContainer ? Array.from(dotsContainer.querySelectorAll('.carousel-dot')) : [];
+            
+            function updateSlide(newIndex) {
+                if (newIndex < 0 || newIndex >= slides.length) {
+                    return;
+                }
+                slides[currentIndex].classList.remove('active');
+                slides[newIndex].classList.add('active');
+                currentIndex = newIndex;
+                
+                if (dots.length) {
+                    dots.forEach((dot, idx) => {
+                        if (idx === currentIndex) {
+                            dot.classList.add('active');
+                        } else {
+                            dot.classList.remove('active');
+                        }
+                    });
+                }
+            }
+            
+            if (dots.length) {
+                dots.forEach(dot => {
+                    dot.addEventListener('click', () => {
+                        const target = Number(dot.getAttribute('data-slide'));
+                        updateSlide(target);
+                    });
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
+

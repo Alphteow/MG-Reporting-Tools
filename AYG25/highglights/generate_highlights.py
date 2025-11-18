@@ -467,12 +467,6 @@ class HighlightsGenerator:
         """
         cards = []
         
-        # Create medal tally card as first card if there are highlights
-        if highlights:
-            tally_card = self._create_medal_tally_card(highlights)
-            if tally_card:
-                cards.append(tally_card)
-        
         for highlight in highlights:
             card = self._card_from_highlight(highlight, len(cards) + 1, group_key)
             cards.append(card)
@@ -484,16 +478,8 @@ class HighlightsGenerator:
                 card_copy['index'] = idx
                 cards.append(card_copy)
         
-        # Sort cards alphabetically by sport header, but keep tally card first
-        tally_card = None
-        if cards and cards[0].get('is_tally_card'):
-            tally_card = cards.pop(0)
-        
+        # Sort cards alphabetically by sport header
         cards.sort(key=lambda x: x.get('sport', '').upper())
-        
-        # Re-insert tally card at the beginning
-        if tally_card:
-            cards.insert(0, tally_card)
         
         # Re-index cards after sorting
         for idx, card in enumerate(cards, start=1):
@@ -1001,17 +987,41 @@ class HighlightsGenerator:
         cards = self.build_result_cards(group_key, highlights)
         slides = self.chunk_cards(cards, chunk_size=9)
         
+        # Calculate gold medal count for header
+        gold_count = 0
+        for highlight in highlights:
+            medals = (highlight.get('medals') or '').strip()
+            if medals:
+                medal_key = str(medals).lower()
+                if medal_key not in ('na', 'n/a', 'none', 'no medal', 'nil') and 'gold' in medal_key:
+                    gold_count += 1
+        
+        # Format date for title
+        if GROUP_BY_DATE and group_key:
+            # Format date nicely
+            try:
+                from datetime import datetime as dt
+                parsed_date = dt.strptime(str(group_key), '%Y-%m-%d')
+                formatted_date = parsed_date.strftime('%d %B %Y')
+            except:
+                formatted_date = str(group_key)
+        else:
+            formatted_date = group_key or ''
+        
         subtitle = "AYG25 Competition Results"
         if group_key and not GROUP_BY_DATE:
             subtitle = f"{group_key} Competition Results"
         
+        section_title = f"GOLD MEDALS FOR {formatted_date}" if formatted_date else "GOLD MEDALS FOR THE DAY"
+        
         html_content = html_template.render(
-            section_title="Results",
+            section_title=section_title,
             subtitle=subtitle,
             group_label=group_key,
             cards=cards,
             slides=slides,
-            generation_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            generation_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            gold_medal_count=gold_count
         )
         
         return html_content

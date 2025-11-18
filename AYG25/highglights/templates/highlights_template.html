@@ -31,18 +31,47 @@
         .results-section { max-width: 100%; margin: 0 auto; }
         .results-header {
             margin-bottom: 32px;
+            padding: 0;
+            background: transparent;
+            color: #ffffff;
+            border-radius: 0;
+            box-shadow: none;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            display: flex;
+            align-items: stretch;
+            gap: 24px;
+        }
+        .results-title-container {
+            flex: 3;
             padding: 24px 32px;
             background: #bd1e2d;
             color: #ffffff;
             border-radius: 20px;
             box-shadow: 0 14px 30px rgba(189, 30, 45, 0.28);
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
+            display: flex;
+            align-items: center;
         }
         .results-title {
             margin: 0;
             font-size: 30px;
             font-weight: 700;
+        }
+        .results-medal-tally {
+            flex: 0 0 auto;
+            padding: 24px 20px;
+            background: #bd1e2d;
+            color: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 14px 30px rgba(189, 30, 45, 0.28);
+            text-align: right;
+            font-size: 32px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
         }
         .results-subtitle {
             margin: 10px 0 0;
@@ -291,7 +320,12 @@
     <div class="results-canvas">
         <section class="results-section" aria-labelledby="results-title">
             <header class="results-header">
-                <h2 class="results-title" id="results-title">{{ section_title }}</h2>
+                <div class="results-title-container">
+                    <h2 class="results-title" id="results-title">{{ section_title }}</h2>
+                </div>
+                <div class="results-medal-tally">
+                    {{ gold_medal_count }} 🥇
+                </div>
             </header>
             <div class="results-carousel" data-total-slides="{{ slides|length }}">
                 <div class="carousel-track" id="results-carousel-track">
@@ -301,21 +335,11 @@
                             {% for card in slide %}
                             <article class="result-card" data-card-index="{{ card.index }}">
                                 <div class="card-header">
-                                    {% if card.medal_label and card.medal_icon %}
-                                    <div class="card-medal" aria-label="{{ card.medal_label }}">{{ card.medal_icon }}</div>
-                                    {% endif %}
                                     <h3 class="card-header-title">{{ card.sport }}</h3>
                                 </div>
                                 <div class="card-main">
                                     <div class="card-content">
                                         <h4 class="card-title">{{ card.event_details }}</h4>
-                                        {% if card.is_tally_card %}
-                                        <div class="card-scoreboard" style="text-align: center; padding: 20px;">
-                                            <div style="font-size: 24px; font-weight: 700; color: #1b1b1b; line-height: 1.6;">
-                                                {{ card.result_summary }}
-                                            </div>
-                                        </div>
-                                        {% else %}
                                         <div class="card-scoreboard">
                                             {% for competitor in card.competitors %}
                                             <div class="score-row" data-role="{% if loop.index0 == 0 %}primary{% else %}opponent{% endif %}">
@@ -340,7 +364,6 @@
                                             </div>
                                             {% endfor %}
                                         </div>
-                                        {% endif %}
                                     </div>
                                 </div>
                             </article>
