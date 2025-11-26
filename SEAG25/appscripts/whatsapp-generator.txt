@@ -60,16 +60,16 @@ const HEADER_LABELS = {
   TIME_END_SGP: 'TIME END (SGP) 24HR CLOCK',
   SPORT: 'SPORT',
   DISCIPLINE: 'DISCIPLINE',
-  EVENT_GENDER: 'EVENT_GENDER',
+  EVENT_GENDER: 'EVENT GENDER',
   EVENT: 'EVENT',
-  EVENT_KEY: 'EVENT_KEY',
+  EVENT_KEY: 'EVENT KEY',
   TEAM_EVENT: 'TEAM SPORT/EVENT',
-  ATHLETE_NAME: 'ATHLETE_NAME',
+  ATHLETE_NAME: 'NAME OF ATHLETE (SGP)',
   ROUND: 'STAGE / ROUND OF COMPETITION',
   FIXTURES: 'FIXTURES',
   BROADCAST: 'BROADCAST',
   MEDAL_TALLY_FLAG: 'ADD INTO MEDAL TALLY (NON-DEMO)',
-  VENUE: 'COMPETITION_VENUE',
+  VENUE: 'COMPETITION VENUE',
   COMPETITOR_NAME: 'NAME OF ATHLETE (COMPETITOR)',
   COMPETITOR_COUNTRY: 'COUNTRY NAME (COMPETITOR)',
   COUNTRY_SGP: 'COUNTRY NAME (SGP)',
@@ -78,8 +78,8 @@ const HEADER_LABELS = {
   SCORE_COMPETITOR: 'SCORE (COMPETITOR)',
   SCORE_SGP: 'SCORE/DISTANCE/HEIGHT (SGP)',
   TIMING_COMPETITOR: 'TIMING (COMPETITORS)',
-  TIMING_SGP: 'TIMING (SGP)',
-  PB_NR: 'PB/NR',
+  TIMING_SGP: 'TIMING (SGP) HH:MM:SS.MS',
+  PB_NR: 'PB/NR/GR',
   H2H_RESULT: 'H2H WIN/DRAW/LOSE',
   ROUND_POSITION: 'POSITION IN ENTIRE ROUND',
   ROUND_COMPETITORS: 'NO OF COMPETITORS IN ENTIRE ROUND',
@@ -87,18 +87,18 @@ const HEADER_LABELS = {
   EVENT_COMPETITORS: 'NUMBER OF COMPETITIORS IN EVENT',
   WIN_TYPE: 'WIN TYPE',
   ADVANCEMENT_STATUS: 'ADVANCED',
-  MEDAL_TEXT: 'MEDAL',
+  MEDAL_TEXT: 'MEDALS',
   REMARKS: 'REMARKS',
   MILESTONES: 'MILESTONES',
   RECORDS: 'RECORDS',
   WHATSAPP_AUTO: 'WHATSAPP MESSAGE (AUTO GENERATED)',
   WEB_AUTO: 'WEB RESULTS (AUTO GENERATED)',
   RECORDED_BY: 'RECORDED BY',
-  PB_NR_KEY: 'PB-NR-Key',
+  PB_NR_KEY: 'PB-NR KEY',
   EVENT_GENDER_INTERNAL: 'EVENT GENDER (INTERNAL)',
   EVENT_INTERNAL: 'EVENT (INTERNAL)',
   REPORTED_STATUS: 'REPORTED (FOLLOW SGP DATE AND TIME)',
-  RESULT_TYPE: 'Type of Results',
+  RESULT_TYPE: 'RESULTS TYPE',
   TOTAL_SCORE: 'TOTAL SCORE (SGP)',
   NEXT_OPPONENT: 'NEXT OPPONENT',
   NEXT_DAY: 'NEXT DAY',
@@ -112,6 +112,18 @@ let COLS = null;
 let WHATSAPP_COL = null;
 let WEB_COL = null;
 let LAST_DATA_COLUMN = null;
+let SCHEDULE_DATA_ROWS = null;
+let CURRENT_ROW_INDEX = null;
+let NEXT_MATCH_CACHE = null;
+
+function setScheduleDataRows(rows) {
+  SCHEDULE_DATA_ROWS = rows;
+}
+
+function setCurrentRowIndex(index) {
+  CURRENT_ROW_INDEX = index;
+  NEXT_MATCH_CACHE = null;
+}
 
 function normalizeHeaderName(name) {
   return name ? name.toString().replace(/\s+/g, ' ').trim().toUpperCase() : '';
@@ -229,7 +241,7 @@ function onOpen() {
   ensureColumnIndexes();
   SpreadsheetApp.getUi()
     .createMenu('SEAG Tools')
-    .addItem('Generate WhatsApp (selection)', 'generateWhatsAppForSelection')
+    .addItem('Generate WhatsApp & Web Results', 'generateWhatsAppForSelection')
     .addSeparator()
     .addItem('Verify template coverage', 'verifyTemplateCoverage')
     .addToUi();
@@ -258,6 +270,7 @@ function generateWhatsAppForSelection() {
   const allData = sheet
     .getRange(CONFIG.startRow, 1, lastRow - CONFIG.startRow + 1, LAST_DATA_COLUMN)
     .getValues();
+  setScheduleDataRows(allData);
 
   for (let i = 0; i < selection.getNumRows(); i++) {
     const rowNumber = selection.getRow() + i;
@@ -267,6 +280,7 @@ function generateWhatsAppForSelection() {
 
     const dataIndex = rowNumber - CONFIG.startRow;
     const row = allData[dataIndex];
+    setCurrentRowIndex(dataIndex);
     const templateEntry = findTemplateForRow(templates, row);
     const whatsappCell = sheet.getRange(rowNumber, WHATSAPP_COL);
 
@@ -290,9 +304,15 @@ function generateWhatsAppForSelection() {
     }
 
     const message = replacePlaceholders(templateText, row);
-    whatsappCell.setValue(message || '');
+    const finalMessage = sanitizeFinalOutput(message);
+    const webSummary = extractWebResultsSection(finalMessage);
+    whatsappCell.setValue(finalMessage || '');
+    if (WEB_COL) {
+      const webCell = sheet.getRange(rowNumber, WEB_COL);
+      webCell.setValue(webSummary || '');
+    }
 
-    if (isMessageComplete(message)) {
+    if (isMessageComplete(finalMessage)) {
       whatsappCell.setBackground(CONFIG.colors.complete);
     } else {
       whatsappCell.setBackground(CONFIG.colors.incomplete);
@@ -611,13 +631,13 @@ function formatValueForPlaceholder(placeholder, rawValue, row) {
     case '{PB_NR_TEXT}':
       return getPBNRText(row);
     case '{NEXT_OPPONENT}':
-      return formatNextOpponent(row);
+      return getNextOpponentValue(row);
     case '{NEXT_DAY}':
-      return formatNextDay(row);
+      return getNextDayValue(row);
     case '{NEXT_TIME}':
-      return formatNextTime(row);
+      return getNextTimeValue(row);
     case '{NEXT_ROUND}':
-      return formatNextRound(row);
+      return getNextRoundValue(row);
     case '{WINNER}':
       return h2h.winner;
     case '{LOSER}':
@@ -643,23 +663,70 @@ function isMessageComplete(message) {
   return true;
 }
 
+function sanitizeFinalOutput(text) {
+  if (!text) return text;
+  const collapsed = text.replace(/\.{2,}/g, '.');
+  return ensureSentencePeriods(collapsed);
+}
+
+function ensureSentencePeriods(text) {
+  const lines = text.split('\n');
+  const updated = lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return line;
+    if (/^\*/.test(trimmed)) {
+      return line;
+    }
+    if (/[.!?)]$/.test(trimmed)) {
+      return line;
+    }
+    return line + '.';
+  });
+  return updated.join('\n');
+}
+
+function extractWebResultsSection(message) {
+  if (!message) return '';
+  const segments = message
+    .split(/\n{2,}/)
+    .map(part => part.trim())
+    .filter(Boolean);
+  if (!segments.length) {
+    return '';
+  }
+  const tail = segments[segments.length - 1];
+  return stripScheduleDetails(tail);
+}
+
+function stripScheduleDetails(text) {
+  if (!text) return '';
+  let cleaned = text.replace(/\s+on\s+[^\.\n]+?\(THA\)\.?/gi, '');
+  cleaned = cleaned.replace(/\s+on\s+[^\.\n]+$/gi, '');
+  return sanitizeFinalOutput(cleaned).trim();
+}
+
 function getPBNRText(row) {
   ensureColumnIndexes();
   const raw = (row[COLS.PB_NR] || '').toString().toUpperCase().trim();
   if (!raw || raw === 'NONE') return '';
 
   const records = raw.split(',').map(r => r.trim()).filter(Boolean);
-  const labels = [];
-  if (records.includes('NR')) labels.push('National Record');
-  if (records.includes('U17 NR') || records.includes('U17NR')) labels.push('U17 National Record');
-  if (records.includes('GR')) labels.push('Games Record');
-  if (records.includes('PB')) labels.push('Personal Best');
+  const statements = [];
+  if (records.includes('PB')) {
+    statements.push('This is a new Personal Best.');
+  }
+  if (records.includes('NR')) {
+    statements.push('This is a new National Record.');
+  }
+  if (records.includes('U17 NR') || records.includes('U17NR')) {
+    statements.push('This is a new U17 National Record.');
+  }
+  if (records.includes('GR')) {
+    statements.push('This is a new Games Record.');
+  }
 
-  if (!labels.length) return '';
-  if (labels.length === 1) return `New ${labels[0]}.`;
-  if (labels.length === 2) return `New ${labels[0]} and ${labels[1]}.`;
-  const last = labels.pop();
-  return `New ${labels.join(', ')}, and ${last}.`;
+  if (!statements.length) return '';
+  return `\n\n${statements.join(' ')}`;
 }
 
 function formatDate(value) {
@@ -682,6 +749,21 @@ function formatTime(value) {
   const str = value.toString();
   if (/^\d{2}:\d{2}/.test(str)) {
     return str.substring(0, 5) + 'hr';
+  }
+  return str;
+}
+
+function formatPlainTime(value) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'HH:mm');
+  }
+  const str = value.toString().trim();
+  if (!str) {
+    return '';
+  }
+  if (/^\d{1,2}:\d{2}/.test(str)) {
+    return str.substring(0, 5);
   }
   return str;
 }
@@ -771,25 +853,52 @@ function getAdvancementStatusMessage(row) {
   ensureColumnIndexes();
   const statusValue = getAdvancedStatusValue(row);
   if (!statusValue) return '';
-
-  const opponent = formatNextOpponent(row) || 'TBC';
-  const day = formatNextDay(row) || 'TBC';
-  const time = formatNextTime(row);
-  const timeText = time ? `${time} hrs (THA)` : 'TBC hrs (THA)';
-  const nextRound = formatNextRound(row) || 'next round';
-
-  switch (statusValue) {
-    case 'NEXT MATCH':
-      return `SGP will next play against ${opponent} on ${day} at ${timeText}.`;
-    case 'YES':
-      return `SGP advanced to the ${nextRound} against ${opponent} on ${day} at ${timeText}.`;
-    case 'BYE':
-      return `SGP received a BYE and advanced to the ${nextRound} against ${opponent} on ${day} at ${timeText}.`;
-    case 'NO':
-      return 'Did not advance.';
-    default:
-      return '';
+  if (statusValue === 'NO') {
+    return 'Did not advance.';
   }
+
+  const derived = getDerivedNextMatchDetails(row);
+  const hasDerivedDetails =
+    derived &&
+    hasValue(derived.opponent) &&
+    hasValue(derived.formattedDate) &&
+    hasValue(derived.formattedTime);
+  const fallbackRound = getNextRoundValue(row) || 'next round';
+
+  if (hasDerivedDetails) {
+    const opponent = derived.opponent;
+    const dayText = derived.formattedDate;
+    const timeText = `${derived.formattedTime} hrs (THA)`;
+    const roundText = derived.round || fallbackRound;
+    switch (statusValue) {
+      case 'NEXT MATCH':
+        return `SGP will next play against ${opponent} on ${dayText} at ${timeText}.`;
+      case 'BYE':
+        return `SGP received a BYE and advanced to the ${roundText} against ${opponent} on ${dayText} at ${timeText}.`;
+      case 'YES':
+      default:
+        return `SGP advanced to the ${roundText} against ${opponent} on ${dayText} at ${timeText}.`;
+    }
+  }
+
+  const fallbackDateRaw = formatNextDay(row);
+  const fallbackTimeRaw = formatNextTime(row);
+  const fallbackDate = fallbackDateRaw || 'TBC';
+  const fallbackTime = fallbackTimeRaw ? `${fallbackTimeRaw} hrs (THA)` : 'TBC hrs (THA)';
+
+  if (statusValue === 'NEXT MATCH') {
+    return `SGP will next play in the ${fallbackRound} on ${fallbackDate} at ${fallbackTime}.`;
+  }
+
+  if (hasValue(fallbackRound) && (hasValue(fallbackDateRaw) || hasValue(fallbackTimeRaw))) {
+    return `SGP advanced to the ${fallbackRound} on ${fallbackDate} at ${fallbackTime}.`;
+  }
+
+  if (hasValue(fallbackRound)) {
+    return `SGP advanced to the ${fallbackRound}.`;
+  }
+
+  return 'SGP advanced to the next round.';
 }
 
 function getAdvancedStatusValue(row) {
@@ -821,17 +930,116 @@ function formatNextDay(row) {
 }
 
 function formatNextTime(row) {
-  const value = getColumnValue(row, COLS.NEXT_TIME);
-  if (!value) return '';
-  if (value instanceof Date) {
-    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'HH:mm');
-  }
-  return value.toString().trim();
+  return formatPlainTime(getColumnValue(row, COLS.NEXT_TIME));
 }
 
 function formatNextRound(row) {
   const value = getColumnValue(row, COLS.NEXT_ROUND);
   return value ? value.toString().trim() : '';
+}
+
+function getDerivedNextMatchDetails(row) {
+  if (NEXT_MATCH_CACHE !== null) {
+    return NEXT_MATCH_CACHE;
+  }
+  if (!SCHEDULE_DATA_ROWS || CURRENT_ROW_INDEX === null || CURRENT_ROW_INDEX < 0) {
+    NEXT_MATCH_CACHE = null;
+    return NEXT_MATCH_CACHE;
+  }
+  NEXT_MATCH_CACHE = deriveNextMatchFromSchedule(row);
+  return NEXT_MATCH_CACHE;
+}
+
+function deriveNextMatchFromSchedule(row) {
+  ensureColumnIndexes();
+  if (!SCHEDULE_DATA_ROWS || CURRENT_ROW_INDEX === null) {
+    return null;
+  }
+
+  const sport = safeUpper(row[COLS.SPORT]);
+  const discipline = safeUpper(row[COLS.DISCIPLINE]);
+  const event = safeUpper(row[COLS.EVENT]);
+  const athlete = safeUpper(row[COLS.ATHLETE_NAME]);
+
+  for (let i = CURRENT_ROW_INDEX + 1; i < SCHEDULE_DATA_ROWS.length; i++) {
+    const candidate = SCHEDULE_DATA_ROWS[i];
+    if (sport && safeUpper(candidate[COLS.SPORT]) !== sport) continue;
+    if (discipline && safeUpper(candidate[COLS.DISCIPLINE]) !== discipline) continue;
+    if (event && safeUpper(candidate[COLS.EVENT]) !== event) continue;
+
+    const candidateAthlete = safeUpper(candidate[COLS.ATHLETE_NAME]);
+    if (athlete && candidateAthlete && candidateAthlete !== athlete) continue;
+
+    const opponent = pickOpponentFromRow(candidate);
+    const dateRaw = getColumnValue(candidate, COLS.DATE_THA) || getColumnValue(candidate, COLS.NEXT_DAY);
+    const timeRaw = getColumnValue(candidate, COLS.TIME_START_THA) || getColumnValue(candidate, COLS.NEXT_TIME);
+    const roundRaw = getColumnValue(candidate, COLS.ROUND) || getColumnValue(candidate, COLS.NEXT_ROUND);
+    const formattedDate = formatDate(dateRaw);
+    const formattedTime = formatPlainTime(timeRaw);
+
+    if (hasValue(opponent) || hasValue(formattedDate) || hasValue(formattedTime)) {
+      return {
+        opponent: opponent || '',
+        formattedDate,
+        formattedTime,
+        round: roundRaw ? roundRaw.toString().trim() : ''
+      };
+    }
+  }
+
+  return null;
+}
+
+function pickOpponentFromRow(row) {
+  const derivedOpponent = getColumnValue(row, COLS.NEXT_OPPONENT);
+  if (hasValue(derivedOpponent)) {
+    return derivedOpponent.toString().trim();
+  }
+  if (COLS.COMPETITOR_COUNTRY !== undefined) {
+    const competitorCountry = row[COLS.COMPETITOR_COUNTRY];
+    if (hasValue(competitorCountry)) {
+      return competitorCountry.toString().trim();
+    }
+  }
+  if (COLS.COMPETITOR_NAME !== undefined) {
+    const competitorName = row[COLS.COMPETITOR_NAME];
+    if (hasValue(competitorName)) {
+      return competitorName.toString().trim();
+    }
+  }
+  return '';
+}
+
+function getNextOpponentValue(row) {
+  const derived = getDerivedNextMatchDetails(row);
+  if (derived && hasValue(derived.opponent)) {
+    return derived.opponent;
+  }
+  return formatNextOpponent(row);
+}
+
+function getNextDayValue(row) {
+  const derived = getDerivedNextMatchDetails(row);
+  if (derived && hasValue(derived.formattedDate)) {
+    return derived.formattedDate;
+  }
+  return formatNextDay(row);
+}
+
+function getNextTimeValue(row) {
+  const derived = getDerivedNextMatchDetails(row);
+  if (derived && hasValue(derived.formattedTime)) {
+    return derived.formattedTime;
+  }
+  return formatNextTime(row);
+}
+
+function getNextRoundValue(row) {
+  const derived = getDerivedNextMatchDetails(row);
+  if (derived && hasValue(derived.round)) {
+    return derived.round;
+  }
+  return formatNextRound(row);
 }
 
 function isFinalRound(row) {
