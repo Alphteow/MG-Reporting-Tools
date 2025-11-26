@@ -17,6 +17,14 @@ firebase-debug.*.log*
 # it commented so all members can deploy to the same project(s) in .firebaserc.
 # .firebaserc
 
+# macOS clutter
+.DS_Store
+**/.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+
 # Runtime data
 pids
 *.pid
@@ -64,6 +72,11 @@ node_modules/
 
 # dotenv environment variables file
 .env
+
+# Local athlete / credential spreadsheets (never commit)
+SEAG25/Athlete_Data/
+*EBN*_TeamSG_ID*.xlsx
+*EBN*.xlsx
 
 # dataconnect generated files
 .dataconnect
