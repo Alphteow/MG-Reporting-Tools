@@ -1,0 +1,282 @@
+/**
+ * Copy competition schedule rows (excluding Technical Meetings) into
+ * the SEA Game Schedule & Results sheet (columns B → K only).
+ * The sync caps itself at MAX_ROWS rows to avoid touching protected ranges.
+ */
+const SEA_SYNC_CONFIG = {
+  sourceSheetName: 'SEAG25 Competition Schedule',
+  headerRow: 8,
+  dataStartRow: 9,
+  targetSpreadsheetId: '1q62FNYDFJbr3QwJuXM6UJvY0v4rpULtKFuMuoWiiIq8',
+  targetSheetName: 'SEA Game Schedule & Results',
+  targetHeaderRow: 4,
+  targetStartRow: 5,
+  targetStartColumn: 2 // column B
+};
+
+const SEA_SYNC_MAX_ROWS = 800;
+
+const SEA_SYNC_COLUMNS = [
+  'date_and_time',
+  'sport',
+  'event',
+  'athlete_name',
+  'opponent_country_flag',
+  'medal',
+  'opponent',
+  'round',
+  'venue',
+  'result'
+];
+
+let SEA_SYNC_HEADER_MAP = null;
+let SEA_SYNC_COLS = null;
+
+function syncSeaResults() {
+  initializeSeaSyncColumns();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = ss.getSheetByName(SEA_SYNC_CONFIG.sourceSheetName);
+  if (!sourceSheet) {
+    throw new Error(`Source sheet not found: ${SEA_SYNC_CONFIG.sourceSheetName}`);
+  }
+
+  const lastRow = sourceSheet.getLastRow();
+  if (lastRow < SEA_SYNC_CONFIG.dataStartRow) {
+    SpreadsheetApp.getUi().alert('No schedule rows found.');
+    return;
+  }
+
+  const sourceValues = sourceSheet
+    .getRange(
+      SEA_SYNC_CONFIG.dataStartRow,
+      1,
+      lastRow - SEA_SYNC_CONFIG.dataStartRow + 1,
+      sourceSheet.getLastColumn()
+    )
+    .getValues();
+
+  const eligibleRows = sourceValues
+    .filter(row => {
+      const event = safeUpperSea(row[SEA_SYNC_COLS.EVENT]);
+      const sport = safeUpperSea(row[SEA_SYNC_COLS.SPORT]);
+      if (!event || !sport) return false;
+      if (event === 'TECHNICAL MEETING') return false;
+      return true;
+    })
+    .map(buildSeaTargetRow)
+    .filter(Boolean);
+
+  if (!eligibleRows.length) {
+    SpreadsheetApp.getUi().alert('No eligible rows to sync (all filtered).');
+    return;
+  }
+
+  const rowsToWrite = eligibleRows.slice(0, SEA_SYNC_MAX_ROWS);
+  const targetSheet = SpreadsheetApp.openById(SEA_SYNC_CONFIG.targetSpreadsheetId)
+    .getSheetByName(SEA_SYNC_CONFIG.targetSheetName);
+  if (!targetSheet) {
+    throw new Error(`Target sheet not found: ${SEA_SYNC_CONFIG.targetSheetName}`);
+  }
+
+  // Always operate on a capped window to avoid protected areas further down.
+  const clearRange = targetSheet.getRange(
+    SEA_SYNC_CONFIG.targetStartRow,
+    SEA_SYNC_CONFIG.targetStartColumn,
+    SEA_SYNC_MAX_ROWS,
+    SEA_SYNC_COLUMNS.length
+  );
+  Logger.log(`Clearing block ${clearRange.getA1Notation()}`);
+  clearRange.clearContent();
+
+  const writeHeight = rowsToWrite.length;
+  const writeRange = targetSheet.getRange(
+    SEA_SYNC_CONFIG.targetStartRow,
+    SEA_SYNC_CONFIG.targetStartColumn,
+    writeHeight,
+    SEA_SYNC_COLUMNS.length
+  );
+  Logger.log(`Writing block ${writeRange.getA1Notation()}`);
+  writeRange.setValues(rowsToWrite);
+
+  SpreadsheetApp.getUi().alert(`Synced ${writeHeight} row(s) (capped at ${SEA_SYNC_MAX_ROWS}).`);
+}
+
+function buildSeaTargetRow(row) {
+  return [
+    buildSeaDateTime(row),
+    toTitleCase(row[SEA_SYNC_COLS.SPORT_TEAMSG] || row[SEA_SYNC_COLS.SPORT]),
+    row[SEA_SYNC_COLS.EVENT] || '',
+    toTitleCase(row[SEA_SYNC_COLS.ATHLETE_NAME]),
+    formatSeaOpponentCountry(row),
+    formatSeaMedal(row),
+    toTitleCase(row[SEA_SYNC_COLS.COMPETITOR_NAME]),
+    row[SEA_SYNC_COLS.ROUND] || '',
+    row[SEA_SYNC_COLS.VENUE] || '',
+    formatSeaResult(row)
+  ];
+}
+
+function buildSeaDateTime(row) {
+  const datePart = formatSeaDate(row[SEA_SYNC_COLS.DATE_THA]);
+  const timePart = formatSeaTime(row[SEA_SYNC_COLS.TIME_START_THA]);
+  return [datePart, timePart].filter(Boolean).join(' ');
+}
+
+function formatSeaMedal(row) {
+  const medalIdx = SEA_SYNC_COLS.MEDAL_TEXT ?? SEA_SYNC_COLS.MEDAL_RESULT;
+  const raw = medalIdx !== undefined ? (row[medalIdx] || '').toString().trim() : '';
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  if (lower.includes('gold')) return 'Gold';
+  if (lower.includes('silver')) return 'Silver';
+  if (lower.includes('bronze')) return 'Bronze';
+  return raw;
+}
+
+function formatSeaResult(row) {
+  let resultText = row[SEA_SYNC_COLS.WEB_RESULTS] || row[SEA_SYNC_COLS.WHATSAPP_AUTO] || '';
+  const medal = formatSeaMedal(row).toLowerCase();
+  if (medal.includes('gold')) {
+    resultText = `🥇 ${resultText}`.trim();
+  } else if (medal.includes('silver')) {
+    resultText = `🥈 ${resultText}`.trim();
+  } else if (medal.includes('bronze')) {
+    resultText = `🥉 ${resultText}`.trim();
+  }
+  return resultText;
+}
+
+function formatSeaOpponentCountry(row) {
+  const code = safeUpperSea(row[SEA_SYNC_COLS.COMPETITOR_COUNTRY]);
+  if (!code) return '';
+  return SEA_COUNTRY_MAP[code] || code;
+}
+
+function formatSeaDate(value) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = value.getDate().toString().padStart(2, '0');
+    return `${day} ${months[value.getMonth()]}`;
+  }
+  return value.toString();
+}
+
+function formatSeaTime(value) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'HH:mm');
+  }
+  const text = value.toString();
+  if (/^\d{2}:\d{2}/.test(text)) {
+    return text.substring(0, 5);
+  }
+  return text;
+}
+
+function addSeaOrdinal(value) {
+  const num = parseInt(value, 10);
+  if (isNaN(num)) return '';
+  if (num % 100 >= 11 && num % 100 <= 13) return `${num}th`;
+  switch (num % 10) {
+    case 1: return `${num}st`;
+    case 2: return `${num}nd`;
+    case 3: return `${num}rd`;
+    default: return `${num}th`;
+  }
+}
+
+function initializeSeaSyncColumns() {
+  if (SEA_SYNC_COLS) return;
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SEA_SYNC_CONFIG.sourceSheetName);
+  if (!sheet) {
+    throw new Error(`Source sheet "${SEA_SYNC_CONFIG.sourceSheetName}" not found.`);
+  }
+
+  const headerRow = sheet
+    .getRange(SEA_SYNC_CONFIG.headerRow, 1, 1, sheet.getLastColumn())
+    .getValues()[0];
+
+  SEA_SYNC_HEADER_MAP = {};
+  headerRow.forEach((value, idx) => {
+    const normalized = safeUpperSea(value);
+    if (normalized) {
+      SEA_SYNC_HEADER_MAP[normalized] = idx;
+    }
+  });
+
+  const lookup = (label, fallback) => {
+    const normalized = safeUpperSea(label);
+    if (normalized in SEA_SYNC_HEADER_MAP) {
+      return SEA_SYNC_HEADER_MAP[normalized];
+    }
+    if (fallback) {
+      const fallbackNorm = safeUpperSea(fallback);
+      if (fallbackNorm in SEA_SYNC_HEADER_MAP) {
+        return SEA_SYNC_HEADER_MAP[fallbackNorm];
+      }
+    }
+    throw new Error(`Missing expected column "${label}" in source sheet.`);
+  };
+
+  const optional = (label, fallback) => {
+    const normalized = safeUpperSea(label);
+    if (normalized in SEA_SYNC_HEADER_MAP) {
+      return SEA_SYNC_HEADER_MAP[normalized];
+    }
+    if (fallback) {
+      const fallbackNorm = safeUpperSea(fallback);
+      if (fallbackNorm in SEA_SYNC_HEADER_MAP) {
+        return SEA_SYNC_HEADER_MAP[fallbackNorm];
+      }
+    }
+    return null;
+  };
+
+  SEA_SYNC_COLS = {
+    DATE_THA: lookup('DATE'),
+    TIME_START_THA: lookup('TIME START (THA) 24HR CLOCK'),
+    SPORT_TEAMSG: optional('SPORT (TEAMSG WEBSITE)'),
+    SPORT: lookup('SPORT'),
+    EVENT: lookup('EVENT'),
+    ATHLETE_NAME: lookup('NAME OF ATHLETE (SGP)'),
+    COMPETITOR_NAME: lookup('NAME OF ATHLETE (COMPETITOR)'),
+    COMPETITOR_COUNTRY: lookup('COUNTRY NAME (COMPETITOR)'),
+    ROUND: lookup('STAGE / ROUND OF COMPETITION'),
+    VENUE: lookup('COMPETITION VENUE'),
+    WHATSAPP_AUTO: lookup('WHATSAPP MESSAGE (AUTO GENERATED)'),
+    WEB_RESULTS: lookup('WEB RESULTS (AUTO GENERATED)'),
+    ROUND_POSITION: lookup('POSITION IN ENTIRE ROUND'),
+    ROUND_COMPETITORS: lookup('NO OF COMPETITORS IN ENTIRE ROUND'),
+    H2H_RESULT: lookup('H2H WIN/DRAW/LOSE'),
+    MEDAL_RESULT: lookup('MEDALS'),
+    MEDAL_TEXT: optional('MEDAL', 'MEDALS')
+  };
+}
+
+function safeUpperSea(value) {
+  return value ? value.toString().trim().toUpperCase() : '';
+}
+
+const SEA_COUNTRY_MAP = {
+  BRU: 'Brunei',
+  CAM: 'Cambodia',
+  INA: 'Indonesia',
+  LAO: 'Laos',
+  MAS: 'Malaysia',
+  MYA: 'Myanmar',
+  PHI: 'Philippines',
+  SGP: 'Singapore',
+  THA: 'Thailand',
+  TLS: 'Timor-Leste',
+  VIE: 'Vietnam'
+};
+
+function toTitleCase(value) {
+  if (!value) return '';
+  const text = value.toString().trim().toLowerCase();
+  if (!text) return '';
+  return text.replace(/\b\w/g, char => char.toUpperCase());
+}
+

@@ -103,8 +103,10 @@ const HEADER_LABELS = {
   NEXT_OPPONENT: 'NEXT OPPONENT',
   NEXT_DAY: 'NEXT DAY',
   NEXT_TIME: 'NEXT TIME (THA)',
-  NEXT_ROUND: 'NEXT ROUND'
-  
+  NEXT_ROUND: 'NEXT ROUND',
+  HEAT: 'HEAT NUMBER',
+  TOTAL_PLACEMENT: 'FINAL POSITION IN EVENT',
+  TOTAL_TOTAL: 'NUMBER OF COMPETITIORS IN EVENT' 
 };
 
 let HEADER_MAP = null;
@@ -227,6 +229,9 @@ const PLACEHOLDER_TO_FIELD = {
   '{NEXT_DAY}': 'NEXT_DAY',
   '{NEXT_TIME}': 'NEXT_TIME',
   '{NEXT_ROUND}': 'NEXT_ROUND',
+  '{HEAT}': 'HEAT',
+  '{TOTAL_PLACEMENT}': 'TOTAL_PLACEMENT',
+  '{TOTAL_TOTAL}': 'TOTAL_TOTAL',
   '{H2H_RESULT}': 'H2H_RESULT',
   '{WINNER}': null,
   '{LOSER}': null,
@@ -567,6 +572,8 @@ function replacePlaceholders(template, row) {
   return message
     .replace(/ {2,}/g, ' ')
     .replace(/\t+/g, ' ')
+    .replace(/\.{1}\s+\./g, '.')
+    .replace(/\. \n/g, '.\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
@@ -638,6 +645,12 @@ function formatValueForPlaceholder(placeholder, rawValue, row) {
       return getNextTimeValue(row);
     case '{NEXT_ROUND}':
       return getNextRoundValue(row);
+    case '{HEAT}':
+      return formatHeatValue(row[COLS.HEAT]);
+    case '{TOTAL_PLACEMENT}':
+      return addOrdinalSuffix(row[COLS.TOTAL_PLACEMENT]);
+    case '{TOTAL_TOTAL}':
+      return row[COLS.TOTAL_TOTAL] || '';
     case '{WINNER}':
       return h2h.winner;
     case '{LOSER}':
@@ -665,7 +678,10 @@ function isMessageComplete(message) {
 
 function sanitizeFinalOutput(text) {
   if (!text) return text;
-  const collapsed = text.replace(/\.{2,}/g, '.');
+  let collapsed = text.replace(/\.{2,}/g, '.');
+  collapsed = collapsed.replace(/\s*\n+\s*(SGP (?:won|will|advanced|received)[^\n]*)/gi, ' $1');
+  collapsed = collapsed.replace(/\s*\n+\s*(Did not advance\.)/gi, ' $1');
+  collapsed = collapsed.replace(/\s*\n+\s*(This is a new [^\n]+)/gi, ' $1');
   return ensureSentencePeriods(collapsed);
 }
 
@@ -691,18 +707,28 @@ function extractWebResultsSection(message) {
     .split(/\n{2,}/)
     .map(part => part.trim())
     .filter(Boolean);
-  if (!segments.length) {
-    return '';
-  }
-  const tail = segments[segments.length - 1];
-  return stripScheduleDetails(tail);
+  if (!segments.length) return '';
+
+  const narrativeSegments = segments.filter(seg => !/^\*/.test(seg));
+  const body = narrativeSegments.length ? narrativeSegments : [segments[segments.length - 1]];
+  const summary = body.join('\n\n');
+  return stripScheduleDetails(summary);
 }
 
 function stripScheduleDetails(text) {
   if (!text) return '';
   let cleaned = text.replace(/\s+on\s+[^\.\n]+?\(THA\)\.?/gi, '');
   cleaned = cleaned.replace(/\s+on\s+[^\.\n]+$/gi, '');
-  return sanitizeFinalOutput(cleaned).trim();
+  const paragraphs = cleaned
+    .split(/\n{2,}/)
+    .map(chunk => chunk.trim())
+    .filter(Boolean);
+  const summaryParts = paragraphs.length <= 2
+    ? paragraphs
+    : paragraphs.slice(paragraphs.length - 2);
+  const joined = summaryParts.join(' ');
+  const withoutNames = joined.replace(/^[A-Z \.\(\)]+?\(SGP\)\s*/i, '');
+  return sanitizeFinalOutput(withoutNames).replace(/\s+/g, ' ').trim();
 }
 
 function getPBNRText(row) {
@@ -726,7 +752,7 @@ function getPBNRText(row) {
   }
 
   if (!statements.length) return '';
-  return `\n\n${statements.join(' ')}`;
+  return ` ${statements.join(' ')}`;
 }
 
 function formatDate(value) {
@@ -778,11 +804,32 @@ function formatPerformanceTiming(value) {
   if (value instanceof Date) {
     const hours = Utilities.formatDate(value, Session.getScriptTimeZone(), 'H');
     if (parseInt(hours, 10) === 0) {
+      const minutes = Utilities.formatDate(value, Session.getScriptTimeZone(), 'm');
+      if (parseInt(minutes, 10) === 0) {
+        return Utilities.formatDate(value, Session.getScriptTimeZone(), 's.SS');
+      }
       return Utilities.formatDate(value, Session.getScriptTimeZone(), 'm:ss.SS');
     }
     return Utilities.formatDate(value, Session.getScriptTimeZone(), 'H:mm:ss.SS');
   }
-  return value;
+  const str = value.toString().trim();
+  if (/^0\d:\d{2}:\d{2}\.\d{2}$/.test(str)) {
+    return str.replace(/^0/, '');
+  }
+  if (/^0\d:\d{2}\.\d{2}$/.test(str)) {
+    return str.replace(/^0/, '');
+  }
+  return str;
+}
+
+function formatHeatValue(value) {
+  if (!value && value !== 0) return '';
+  const text = value.toString().trim();
+  if (!text) return '';
+  if (/^heat\s+/i.test(text)) {
+    return text.toUpperCase();
+  }
+  return `HEAT ${text}`.toUpperCase();
 }
 
 function addOrdinalSuffix(value) {
@@ -846,13 +893,13 @@ function getMedalStatusText(row) {
   if (medal.includes('gold')) return 'SGP won the Gold medal';
   if (medal.includes('silver')) return 'SGP won the Silver medal';
   if (medal.includes('bronze')) return 'SGP won the Bronze medal';
-  return `SGP won the ${rawMedal} medal`;
+  return ``;
 }
 
 function getAdvancementStatusMessage(row) {
   ensureColumnIndexes();
   const statusValue = getAdvancedStatusValue(row);
-  if (!statusValue) return '';
+  if (!statusValue || statusValue === 'NA') return '';
   if (statusValue === 'NO') {
     return 'Did not advance.';
   }
