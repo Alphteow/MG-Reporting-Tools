@@ -1,0 +1,186 @@
+{
+  "mapped": [
+    {
+      "sport": "AIR SPORTS",
+      "iconFile": "Icon_Air_Sports.png"
+    },
+    {
+      "sport": "AQUATICS",
+      "iconFile": "Icon_Aquatic_Sports.png"
+    },
+    {
+      "sport": "ARCHERY",
+      "iconFile": "Icon_Archery.png"
+    },
+    {
+      "sport": "ATHLETICS",
+      "iconFile": "Icon_Athletics.png"
+    },
+    {
+      "sport": "BADMINTON",
+      "iconFile": "Icon_Batminton.png"
+    },
+    {
+      "sport": "BASEBALL AND SOFTBALL",
+      "iconFile": "Icon_Baseball.png"
+    },
+    {
+      "sport": "BASKETBALL",
+      "iconFile": "Icon_Basketball.png"
+    },
+    {
+      "sport": "BILLIARDS AND SNOOKER",
+      "iconFile": "Icon_Billiards.png"
+    },
+    {
+      "sport": "BOWLING",
+      "iconFile": "Icon_Bowling.png"
+    },
+    {
+      "sport": "BOXING",
+      "iconFile": "Icon_Boxing.png"
+    },
+    {
+      "sport": "CANOE AND ROWING",
+      "iconFile": "Icon_Canoeing.png"
+    },
+    {
+      "sport": "CHESS",
+      "iconFile": "Icon_Chess.png"
+    },
+    {
+      "sport": "CRICKET",
+      "iconFile": "Icon_Cricket.png"
+    },
+    {
+      "sport": "CYCLING",
+      "iconFile": "Icon_Cycling.png"
+    },
+    {
+      "sport": "EQUESTRIAN",
+      "iconFile": "Icon_Equestrian.png"
+    },
+    {
+      "sport": "ESPORTS",
+      "iconFile": "Icon_Esports.png"
+    },
+    {
+      "sport": "EXTREME",
+      "iconFile": "Icon_Exstream_Sports.png"
+    },
+    {
+      "sport": "FLOORBALL",
+      "iconFile": "Icon_Floorball.png"
+    },
+    {
+      "sport": "FOOTBALL AND FUTSAL",
+      "iconFile": "Icon_Canoeing.png"
+    },
+    {
+      "sport": "GOLF",
+      "iconFile": "Icon_Golf.png"
+    },
+    {
+      "sport": "GYMNASTICS",
+      "iconFile": "Icon_Gymnastics.png"
+    },
+    {
+      "sport": "HANDBALL",
+      "iconFile": "Icon_Handball.png"
+    },
+    {
+      "sport": "HOCKEY",
+      "iconFile": "Icon_Hockey.png"
+    },
+    {
+      "sport": "ICE HOCKEY",
+      "iconFile": "Icon_Ice_Hockey.png"
+    },
+    {
+      "sport": "JU-JITSU",
+      "iconFile": "Icon_Jui-Jitsu.png"
+    },
+    {
+      "sport": "JUDO",
+      "iconFile": "Icon_Judo.png"
+    },
+    {
+      "sport": "KABADDI",
+      "iconFile": "Icon_Kabaddy.png"
+    },
+    {
+      "sport": "KARATE",
+      "iconFile": "Icon_Karate.png"
+    },
+    {
+      "sport": "KICKBOXING",
+      "iconFile": "Icon_Kickboxing.png"
+    },
+    {
+      "sport": "MIXED MARTIAL ARTS",
+      "iconFile": "Icon_Mixed_Martail_Arts.png"
+    },
+    {
+      "sport": "MUAY",
+      "iconFile": "Icon_Muay.png"
+    },
+    {
+      "sport": "PENCAK SILAT",
+      "iconFile": "Icon_Pencak_Silat.png"
+    },
+    {
+      "sport": "RUGBY",
+      "iconFile": "Icon_Rugby.png"
+    },
+    {
+      "sport": "SAILING",
+      "iconFile": "Icon_Sailing.png"
+    },
+    {
+      "sport": "SEPAKTAKRAW",
+      "iconFile": "Icon_Sepak_Takraw.png"
+    },
+    {
+      "sport": "SHOOTING",
+      "iconFile": "Icon_Shooting.png"
+    },
+    {
+      "sport": "SQUASH",
+      "iconFile": "Icon_Squash.png"
+    },
+    {
+      "sport": "TABLE TENNIS",
+      "iconFile": "Icon_Table_Tennis.png"
+    },
+    {
+      "sport": "TAEKWONDO",
+      "iconFile": "Icon_Taekwondo.png"
+    },
+    {
+      "sport": "TENNIS",
+      "iconFile": "Icon_Tennis.png"
+    },
+    {
+      "sport": "VOLLEYBALL",
+      "iconFile": "Icon_Volleyball.png"
+    },
+    {
+      "sport": "WEIGHTLIFTING",
+      "iconFile": "Icon_Weightlifting.png"
+    },
+    {
+      "sport": "WOODBALL",
+      "iconFile": "Icon_Woodball.png"
+    },
+    {
+      "sport": "WUSHU",
+      "iconFile": "Icon_Wushu.png"
+    }
+  ],
+  "unmapped": [
+    "NETBALL"
+  ],
+  "total": 45,
+  "mappedCount": 44,
+  "unmappedCount": 1
+}

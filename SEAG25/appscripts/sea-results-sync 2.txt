@@ -1,0 +1,234 @@
+/**
+ * Copy data from Sheet11 (B4:K1887) into
+ * the SEA Game Schedule & Results sheet (columns B → K only).
+ * The sync reads directly from Sheet11 columns B-K and maps them to target columns.
+ */
+const SEA_SYNC_CONFIG = {
+  sourceSheetName: 'Sheet11',
+  sourceStartRow: 4,  // Row 4 in Sheet11 (B4)
+  sourceEndRow: 1887,  // Row 1887 in Sheet11 (K1887)
+  sourceStartCol: 2,   // Column B (index 2, 1-based)
+  sourceEndCol: 11,    // Column K (index 11, 1-based)
+  targetSpreadsheetId: '1q62FNYDFJbr3QwJuXM6UJvY0v4rpULtKFuMuoWiiIq8',
+  targetSheetName: 'SEA Game Schedule & Results',
+  targetHeaderRow: 4,
+  targetStartRow: 5,
+  targetStartColumn: 2 // column B
+};
+
+const SEA_SYNC_MAX_ROWS = 2000; // Increased to handle up to 1884 rows
+
+const SEA_SYNC_COLUMNS = [
+  'date_and_time',
+  'sport',
+  'event',
+  'athlete_name',
+  'opponent_country_flag',
+  'medal',
+  'opponent',
+  'round',
+  'venue',
+  'result'
+];
+
+// Removed header mapping - Sheet11 uses direct column mapping
+
+function syncSeaResults() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = ss.getSheetByName(SEA_SYNC_CONFIG.sourceSheetName);
+  if (!sourceSheet) {
+    throw new Error(`Source sheet not found: ${SEA_SYNC_CONFIG.sourceSheetName}`);
+  }
+
+  // Read range B4:K1887 from Sheet11
+  // Row 4 is the start row, and we need rows 4 to 1887 (inclusive)
+  const numRows = SEA_SYNC_CONFIG.sourceEndRow - SEA_SYNC_CONFIG.sourceStartRow + 1;
+  const numCols = SEA_SYNC_CONFIG.sourceEndCol - SEA_SYNC_CONFIG.sourceStartCol + 1;
+  
+  const sourceRange = sourceSheet.getRange(
+    SEA_SYNC_CONFIG.sourceStartRow,
+    SEA_SYNC_CONFIG.sourceStartCol,
+    numRows,
+    numCols
+  );
+  
+  Logger.log(`Reading range ${sourceRange.getA1Notation()} from ${SEA_SYNC_CONFIG.sourceSheetName}`);
+  const sourceValues = sourceRange.getValues();
+
+  // Map Sheet11 columns (B-K, indices 0-9) to target columns
+  // Sheet11: B=date_time, C=sport, D=event, E=athlete_name, F=opponent_country_flag, G=medal, H=opponent, I=round, J=venue, K=result
+  const rowsToWrite = sourceValues
+    .map((row, idx) => {
+      // Skip empty rows
+      if (!row[0] && !row[1] && !row[2]) return null;
+      
+      return [
+        formatSheet11DateTime(row[0]),           // B: date_and_time
+        toTitleCase(row[1] || ''),               // C: sport (proper case)
+        row[2] || '',                            // D: event
+        toTitleCase(row[3] || ''),               // E: athlete_name (proper case)
+        formatSheet11CountryCode(row[4] || ''), // F: opponent_country_flag (map 3-letter code to full name)
+        row[5] || '',                            // G: medal
+        row[6] || '',                            // H: opponent
+        row[7] || '',                            // I: round
+        row[8] || '',                            // J: venue
+        row[9] || ''                             // K: result
+      ];
+    })
+    .filter(Boolean);
+
+  if (!rowsToWrite.length) {
+    SpreadsheetApp.getUi().alert('No data rows found in Sheet11.');
+    return;
+  }
+
+  const rowsToSync = rowsToWrite.slice(0, SEA_SYNC_MAX_ROWS);
+  const targetSheet = SpreadsheetApp.openById(SEA_SYNC_CONFIG.targetSpreadsheetId)
+    .getSheetByName(SEA_SYNC_CONFIG.targetSheetName);
+  if (!targetSheet) {
+    throw new Error(`Target sheet not found: ${SEA_SYNC_CONFIG.targetSheetName}`);
+  }
+
+  // Clear the target range
+  const clearRange = targetSheet.getRange(
+    SEA_SYNC_CONFIG.targetStartRow,
+    SEA_SYNC_CONFIG.targetStartColumn,
+    Math.min(SEA_SYNC_MAX_ROWS, rowsToWrite.length),
+    SEA_SYNC_COLUMNS.length
+  );
+  Logger.log(`Clearing block ${clearRange.getA1Notation()}`);
+  clearRange.clearContent();
+
+  // Write the data
+  const writeHeight = rowsToSync.length;
+  const writeRange = targetSheet.getRange(
+    SEA_SYNC_CONFIG.targetStartRow,
+    SEA_SYNC_CONFIG.targetStartColumn,
+    writeHeight,
+    SEA_SYNC_COLUMNS.length
+  );
+  Logger.log(`Writing block ${writeRange.getA1Notation()}`);
+  writeRange.setValues(rowsToSync);
+
+  SpreadsheetApp.getUi().alert(`Synced ${writeHeight} row(s) from Sheet11 (B4:K${SEA_SYNC_CONFIG.sourceEndRow}).`);
+}
+
+/**
+ * Format date/time from Sheet11 (already in format "2025-12-04 17:00:00")
+ * Keep as is or format if needed
+ */
+function formatSheet11DateTime(value) {
+  if (!value) return '';
+  // If it's already a formatted string, return as is
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  // If it's a Date object, format it
+  if (value instanceof Date) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    const seconds = String(value.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+  return value.toString();
+}
+
+/**
+ * Map 3-letter country code to full country name
+ */
+function formatSheet11CountryCode(code) {
+  if (!code) return '';
+  const upperCode = code.toString().trim().toUpperCase();
+  return SEA_COUNTRY_MAP[upperCode] || code; // Return full name if mapped, otherwise return original code
+}
+
+function formatSeaMedal(row) {
+  const medalIdx = SEA_SYNC_COLS.MEDAL_TEXT ?? SEA_SYNC_COLS.MEDAL_RESULT;
+  const raw = medalIdx !== undefined ? (row[medalIdx] || '').toString().trim() : '';
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  if (lower.includes('gold')) return 'Gold';
+  if (lower.includes('silver')) return 'Silver';
+  if (lower.includes('bronze')) return 'Bronze';
+  return raw;
+}
+
+function formatSeaResult(row) {
+  let resultText = row[SEA_SYNC_COLS.WEB_RESULTS] || row[SEA_SYNC_COLS.WHATSAPP_AUTO] || '';
+  const medal = formatSeaMedal(row).toLowerCase();
+  if (medal.includes('gold')) {
+    resultText = `🥇 ${resultText}`.trim();
+  } else if (medal.includes('silver')) {
+    resultText = `🥈 ${resultText}`.trim();
+  } else if (medal.includes('bronze')) {
+    resultText = `🥉 ${resultText}`.trim();
+  }
+  return resultText;
+}
+
+function formatSeaOpponentCountry(row) {
+  const code = safeUpperSea(row[SEA_SYNC_COLS.COMPETITOR_COUNTRY]);
+  if (!code) return '';
+  return SEA_COUNTRY_MAP[code] || code;
+}
+
+function formatSeaDate(value) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = value.getDate().toString().padStart(2, '0');
+    return `${day} ${months[value.getMonth()]}`;
+  }
+  return value.toString();
+}
+
+function formatSeaTime(value) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'HH:mm');
+  }
+  const text = value.toString();
+  if (/^\d{2}:\d{2}/.test(text)) {
+    return text.substring(0, 5);
+  }
+  return text;
+}
+
+function addSeaOrdinal(value) {
+  const num = parseInt(value, 10);
+  if (isNaN(num)) return '';
+  if (num % 100 >= 11 && num % 100 <= 13) return `${num}th`;
+  switch (num % 10) {
+    case 1: return `${num}st`;
+    case 2: return `${num}nd`;
+    case 3: return `${num}rd`;
+    default: return `${num}th`;
+  }
+}
+
+// Removed initializeSeaSyncColumns - no longer needed for Sheet11 direct mapping
+
+const SEA_COUNTRY_MAP = {
+  BRU: 'Brunei',
+  CAM: 'Cambodia',
+  INA: 'Indonesia',
+  LAO: 'Laos',
+  MAS: 'Malaysia',
+  MYA: 'Myanmar',
+  PHI: 'Philippines',
+  SGP: 'Singapore',
+  THA: 'Thailand',
+  TLS: 'Timor-Leste',
+  VIE: 'Vietnam'
+};
+
+function toTitleCase(value) {
+  if (!value) return '';
+  const text = value.toString().trim().toLowerCase();
+  if (!text) return '';
+  return text.replace(/\b\w/g, char => char.toUpperCase());
+}
+

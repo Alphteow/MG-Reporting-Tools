@@ -1,0 +1,267 @@
+[
+  {
+    "sport": "Air Sports",
+    "fileName": "Icon_Air_Sports.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-AIR/Icon_Air%20Sports.png"
+  },
+  {
+    "sport": "Aquatic Sports",
+    "fileName": "Icon_Aquatic_Sports.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-AQUATIC/Icon_Aquatic%20Sports.png"
+  },
+  {
+    "sport": "Archery",
+    "fileName": "Icon_Archery.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-ARCHERY/Icon_Archery.png"
+  },
+  {
+    "sport": "Athletics",
+    "fileName": "Icon_Athletics.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-ATHLETICS/Icon_Athletics.png"
+  },
+  {
+    "sport": "Baseball",
+    "fileName": "Icon_Baseball.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-BASEBALL/Icon_Baseball.png"
+  },
+  {
+    "sport": "Basketball",
+    "fileName": "Icon_Basketball.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-BASKETBALL/Icon_Basketball.png"
+  },
+  {
+    "sport": "Batminton",
+    "fileName": "Icon_Batminton.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Batminton/Icon_Batminton.png"
+  },
+  {
+    "sport": "Billiards",
+    "fileName": "Icon_Billiards.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Billiards/Icon_Billiards.png"
+  },
+  {
+    "sport": "Bowling",
+    "fileName": "Icon_Bowling.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-bowling/Icon_Bowling.png"
+  },
+  {
+    "sport": "Boxing",
+    "fileName": "Icon_Boxing.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-boxing/Icon_Boxing.png"
+  },
+  {
+    "sport": "Chess",
+    "fileName": "Icon_Chess.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-chess/Icon_Chess.png"
+  },
+  {
+    "sport": "Cricket",
+    "fileName": "Icon_Cricket.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-cricket/Icon_Cricket.png"
+  },
+  {
+    "sport": "Cycling",
+    "fileName": "Icon_Cycling.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-cycling/Icon_Cycling.png"
+  },
+  {
+    "sport": "Equestrian",
+    "fileName": "Icon_Equestrian.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-equestrian/Icon_Equestrian.png"
+  },
+  {
+    "sport": "Esports",
+    "fileName": "Icon_Esports.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-esports/Icon_Esports.png"
+  },
+  {
+    "sport": "Exstream Sports",
+    "fileName": "Icon_Exstream_Sports.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-extreme/Icon_Exstream%20Sports.png"
+  },
+  {
+    "sport": "Fencing",
+    "fileName": "Icon_Fencing.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Fencing/Icon_Fencing.png"
+  },
+  {
+    "sport": "Floorball",
+    "fileName": "Icon_Floorball.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-floorball/Icon_Floorball.png"
+  },
+  {
+    "sport": "Flying Discs",
+    "fileName": "Icon_Flying_Discs.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Flying%20Discs/Icon_Flying%20Discs.png"
+  },
+  {
+    "sport": "Golf",
+    "fileName": "Icon_Golf.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Golf/Icon_Golf.png"
+  },
+  {
+    "sport": "Gymnastics",
+    "fileName": "Icon_Gymnastics.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Gymnastics/Icon_Gymnastics.png"
+  },
+  {
+    "sport": "Handball",
+    "fileName": "Icon_Handball.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Handball/Icon_Handball.png"
+  },
+  {
+    "sport": "Hockey",
+    "fileName": "Icon_Hockey.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Hockey/Icon_Hockey.png"
+  },
+  {
+    "sport": "Ice Hockey",
+    "fileName": "Icon_Ice_Hockey.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Ice%20Hockey/Icon_Ice%20Hockey.png"
+  },
+  {
+    "sport": "Ice Skating",
+    "fileName": "Icon_Ice_Skating.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Ice%20Skating/Icon_Ice%20Skating.png"
+  },
+  {
+    "sport": "Judo",
+    "fileName": "Icon_Judo.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Judo/Icon_Judo.png"
+  },
+  {
+    "sport": "Jui-Jitsu",
+    "fileName": "Icon_Jui-Jitsu.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-JiuJitsu/Icon_Jui-Jitsu.png"
+  },
+  {
+    "sport": "Kabaddy",
+    "fileName": "Icon_Kabaddy.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Kabaddi/Icon_Kabaddy.png"
+  },
+  {
+    "sport": "Karate",
+    "fileName": "Icon_Karate.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Karate/Icon_Karate.png"
+  },
+  {
+    "sport": "Kickboxing",
+    "fileName": "Icon_Kickboxing.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Kickboxing/Icon_Kickboxing.png"
+  },
+  {
+    "sport": "Mixed Martail Arts",
+    "fileName": "Icon_Mixed_Martail_Arts.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-MIX/Icon_Mixed%20Martail%20Arts.png"
+  },
+  {
+    "sport": "seagameMouseover_Modern Pentathlon",
+    "fileName": "Icon_seagameMouseover_Modern_Pentathlon.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Modern%20Pentathlon/Icon_seagameMouseover_Modern%20Pentathlon.png"
+  },
+  {
+    "sport": "Muay",
+    "fileName": "Icon_Muay.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Muay/Icon_Muay.png"
+  },
+  {
+    "sport": "Pencak Silat",
+    "fileName": "Icon_Pencak_Silat.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Pencak%20Silat/Icon_Pencak%20Silat.png"
+  },
+  {
+    "sport": "Petanque",
+    "fileName": "Icon_Petanque.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Petanque/Icon_Petanque.png"
+  },
+  {
+    "sport": "Canoeing",
+    "fileName": "Icon_Canoeing.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Rowing/Icon_Canoeing.png"
+  },
+  {
+    "sport": "Rugby",
+    "fileName": "Icon_Rugby.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Rugby/Icon_Rugby.png"
+  },
+  {
+    "sport": "Sailing",
+    "fileName": "Icon_Sailing.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Sailing/Icon_Sailing.png"
+  },
+  {
+    "sport": "Sepak Takraw",
+    "fileName": "Icon_Sepak_Takraw.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Sepak%20Takraw/Icon_Sepak%20Takraw.png"
+  },
+  {
+    "sport": "Shooting",
+    "fileName": "Icon_Shooting.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Shooting/Icon_Shooting.png"
+  },
+  {
+    "sport": "Squash",
+    "fileName": "Icon_Squash.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Squash/Icon_Squash.png"
+  },
+  {
+    "sport": "Table Tennis",
+    "fileName": "Icon_Table_Tennis.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Table%20Tennis/Icon_Table%20Tennis.png"
+  },
+  {
+    "sport": "Taekwondo",
+    "fileName": "Icon_Taekwondo.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Taekwondo/Icon_Taekwondo.png"
+  },
+  {
+    "sport": "Tennis",
+    "fileName": "Icon_Tennis.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Tennis/Icon_Tennis.png"
+  },
+  {
+    "sport": "Teqball",
+    "fileName": "Icon_Teqball.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Teqball/Icon_Teqball.png"
+  },
+  {
+    "sport": "Triathlon",
+    "fileName": "Icon_Triathlon.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Triathlon/Icon_Triathlon.png"
+  },
+  {
+    "sport": "Tug of War",
+    "fileName": "Icon_Tug_of_War.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Tug%20of%20War/Icon_Tug%20of%20War.png"
+  },
+  {
+    "sport": "Volleyball",
+    "fileName": "Icon_Volleyball.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Volleyball/Icon_Volleyball.png"
+  },
+  {
+    "sport": "Weightlifting",
+    "fileName": "Icon_Weightlifting.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Weightlifting/Icon_Weightlifting.png"
+  },
+  {
+    "sport": "Woodball",
+    "fileName": "Icon_Woodball.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Woodball/Icon_Woodball.png"
+  },
+  {
+    "sport": "Wrestling",
+    "fileName": "Icon_Wrestling.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Wrestling/Icon_Wrestling.png"
+  },
+  {
+    "sport": "Wushu",
+    "fileName": "Icon_Wushu.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Wushu/Icon_Wushu.png"
+  },
+  {
+    "sport": "Football",
+    "fileName": "Icon_Football.png",
+    "url": "https://storage.googleapis.com/seagames-2025.firebasestorage.app/content/SPORTS-Football/Icon_Football.png"
+  }
+]

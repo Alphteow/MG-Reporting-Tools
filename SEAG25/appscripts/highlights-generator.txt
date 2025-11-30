@@ -1,0 +1,375 @@
+/**
+ * SEAG25 Highlights Generator - Apps Script
+ * -----------------------------------------
+ * Simple, user-friendly interface for generating daily highlights
+ * 
+ * Features:
+ * - One-click generation for today's highlights
+ * - Date picker for specific dates
+ * - Automatic upload to Google Drive
+ * - Progress indicators and success messages
+ * - Direct links to generated images
+ * 
+ * Setup:
+ * 1. Copy this entire file into a new Apps Script project in your Google Sheet
+ * 2. Update the CONFIG section below with your Firebase Function URL
+ * 3. Save and authorize the script
+ * 4. Refresh your Google Sheet - you'll see a "SEAG Highlights" menu
+ */
+
+// ============================================
+// CONFIGURATION - Update these values
+// ============================================
+const HIGHLIGHTS_CONFIG = {
+  // Firebase Function URL - Get this from Firebase Console > Functions
+  // Format: https://REGION-PROJECT-ID.cloudfunctions.net/FUNCTION_NAME
+  FIREBASE_FUNCTION_URL: 'https://us-central1-major-e910d.cloudfunctions.net/generateHighlightsHttpV2',
+  
+  // Google Sheet ID (the long ID in the URL)
+  SPREADSHEET_ID: '15zXDQdkGeAN2AMMdrJ_qjkjReq_Y3mlU1-_7ciniyS4',
+  
+  // Sheet name containing the competition schedule
+  SHEET_NAME: 'Com Schedule - Test', // Change to 'SEAG25 Competition Schedule' for production
+  
+  // Google Drive folder ID where highlights will be saved
+  // Format: Get from Drive folder URL: https://drive.google.com/drive/folders/FOLDER_ID
+  DRIVE_FOLDER_ID: '1OR1P9sp0JQz0UyYd8hyn2P3F3B08GUBW',
+  
+  // Timeout for function execution (in milliseconds)
+  TIMEOUT_MS: 300000 // 5 minutes
+};
+
+// ============================================
+// MENU SETUP
+// ============================================
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🏆 SEAG Highlights')
+    .addItem('📅 Generate Highlights (Today)', 'generateHighlightsToday')
+    .addItem('📆 Generate Highlights (Select Date)', 'generateHighlightsForDate')
+    .addSeparator()
+    .addItem('🔗 Test Connection', 'testConnection')
+    .addToUi();
+}
+
+// ============================================
+// MAIN FUNCTIONS
+// ============================================
+
+/**
+ * Generate highlights for today's date
+ */
+function generateHighlightsToday() {
+  const today = new Date();
+  const dateStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  generateHighlights(dateStr);
+}
+
+/**
+ * Generate highlights for a specific date (with date picker)
+ */
+function generateHighlightsForDate() {
+  const html = HtmlService.createHtmlOutput(`
+    <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <h3>Select Date for Highlights</h3>
+      <p>Choose the date you want to generate highlights for:</p>
+      <input type="date" id="datePicker" style="padding: 8px; font-size: 14px; width: 200px;" />
+      <br><br>
+      <button onclick="generate()" style="padding: 10px 20px; font-size: 14px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Generate Highlights
+      </button>
+      <div id="status" style="margin-top: 15px; color: #666;"></div>
+    </div>
+    <script>
+      // Set default to today
+      document.getElementById('datePicker').valueAsDate = new Date();
+      
+      function generate() {
+        const date = document.getElementById('datePicker').value;
+        if (!date) {
+          document.getElementById('status').innerHTML = '<span style="color: red;">Please select a date</span>';
+          return;
+        }
+        google.script.run
+          .withSuccessHandler(function(result) {
+            document.getElementById('status').innerHTML = '<span style="color: green;">Processing... Please wait.</span>';
+            google.script.host.close();
+          })
+          .withFailureHandler(function(error) {
+            document.getElementById('status').innerHTML = '<span style="color: red;">Error: ' + error.message + '</span>';
+          })
+          .generateHighlights(date);
+      }
+    </script>
+  `)
+    .setWidth(350)
+    .setHeight(200);
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'Select Date');
+}
+
+/**
+ * Core function to generate highlights
+ */
+function generateHighlights(date) {
+  const ui = SpreadsheetApp.getUi();
+  
+  try {
+    // Show progress dialog
+    const progressHtml = HtmlService.createHtmlOutput(`
+      <div style="font-family: Arial, sans-serif; padding: 30px; text-align: center;">
+        <h3>🔄 Generating Highlights...</h3>
+        <p>Date: ${date}</p>
+        <p style="color: #666; margin-top: 20px;">This may take 1-2 minutes.</p>
+        <p style="color: #666;">Please don't close this window.</p>
+        <div style="margin-top: 30px;">
+          <div style="border: 2px solid #e0e0e0; border-radius: 4px; height: 20px; width: 300px; margin: 0 auto;">
+            <div id="progress" style="background: #4285f4; height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+        </div>
+      </div>
+      <script>
+        let progress = 0;
+        const interval = setInterval(function() {
+          progress += 2;
+          if (progress > 90) progress = 90;
+          document.getElementById('progress').style.width = progress + '%';
+        }, 500);
+      </script>
+    `)
+      .setWidth(400)
+      .setHeight(250);
+    
+    const progressDialog = ui.showModalDialog(progressHtml, 'Generating Highlights');
+    
+    // Call Firebase Function
+    Logger.log(`Calling Firebase Function for date: ${date}`);
+    const response = callFirebaseFunction(date);
+    
+    // Close progress dialog
+    progressDialog.close();
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Unknown error occurred');
+    }
+    
+    // Upload files to Google Drive
+    Logger.log('Uploading files to Google Drive...');
+    const uploadResult = uploadToGoogleDrive(response.data);
+    
+    // Show success message with links
+    showSuccessMessage(date, uploadResult);
+    
+  } catch (error) {
+    Logger.log(`Error: ${error.message}`);
+    Logger.log(error.stack);
+    ui.alert(
+      '❌ Error Generating Highlights',
+      `An error occurred:\n\n${error.message}\n\nPlease check the logs or try again.`,
+      ui.ButtonSet.OK
+    );
+  }
+}
+
+/**
+ * Call Firebase Function to generate highlights
+ */
+function callFirebaseFunction(date) {
+  const url = HIGHLIGHTS_CONFIG.FIREBASE_FUNCTION_URL;
+  const payload = {
+    spreadsheetId: HIGHLIGHTS_CONFIG.SPREADSHEET_ID,
+    sheetName: HIGHLIGHTS_CONFIG.SHEET_NAME,
+    date: date
+  };
+  
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true,
+    timeout: HIGHLIGHTS_CONFIG.TIMEOUT_MS
+  };
+  
+  Logger.log(`Calling: ${url}`);
+  Logger.log(`Payload: ${JSON.stringify(payload)}`);
+  
+  const response = UrlFetchApp.fetch(url, options);
+  const responseCode = response.getResponseCode();
+  const responseText = response.getContentText();
+  
+  Logger.log(`Response Code: ${responseCode}`);
+  Logger.log(`Response: ${responseText}`);
+  
+  if (responseCode !== 200) {
+    throw new Error(`HTTP ${responseCode}: ${responseText}`);
+  }
+  
+  try {
+    const data = JSON.parse(responseText);
+    return { success: true, data: data };
+  } catch (e) {
+    throw new Error(`Failed to parse response: ${e.message}`);
+  }
+}
+
+/**
+ * Upload generated files from GCS to Google Drive
+ */
+function uploadToGoogleDrive(functionResponse) {
+  const folder = DriveApp.getFolderById(HIGHLIGHTS_CONFIG.DRIVE_FOLDER_ID);
+  
+  // Create date-based subfolder
+  const dateStr = functionResponse.folderDate || new Date().toISOString().split('T')[0];
+  let dateFolder;
+  
+  try {
+    const folders = folder.getFoldersByName(dateStr);
+    if (folders.hasNext()) {
+      dateFolder = folders.next();
+    } else {
+      dateFolder = folder.createFolder(dateStr);
+    }
+  } catch (e) {
+    dateFolder = folder; // Fallback to main folder
+  }
+  
+  const uploadedFiles = [];
+  
+  // Upload HTML file
+  if (functionResponse.gcsFiles && functionResponse.gcsFiles.html) {
+    try {
+      const htmlUrl = functionResponse.gcsFiles.html.publicUrl;
+      const htmlBlob = UrlFetchApp.fetch(htmlUrl).getBlob();
+      const htmlFile = dateFolder.createFile(htmlBlob);
+      htmlFile.setName(functionResponse.gcsFiles.html.fileName || 'highlights.html');
+      uploadedFiles.push({
+        name: htmlFile.getName(),
+        url: htmlFile.getUrl(),
+        type: 'HTML'
+      });
+      Logger.log(`Uploaded HTML: ${htmlFile.getName()}`);
+    } catch (e) {
+      Logger.log(`Error uploading HTML: ${e.message}`);
+    }
+  }
+  
+  // Upload screenshot images
+  if (functionResponse.gcsFiles && functionResponse.gcsFiles.screenshots) {
+    for (let i = 0; i < functionResponse.gcsFiles.screenshots.length; i++) {
+      try {
+        const screenshot = functionResponse.gcsFiles.screenshots[i];
+        const imageUrl = screenshot.publicUrl;
+        const imageBlob = UrlFetchApp.fetch(imageUrl).getBlob();
+        const imageFile = dateFolder.createFile(imageBlob);
+        imageFile.setName(screenshot.fileName || `highlight_${i + 1}.png`);
+        uploadedFiles.push({
+          name: imageFile.getName(),
+          url: imageFile.getUrl(),
+          type: 'Image'
+        });
+        Logger.log(`Uploaded image: ${imageFile.getName()}`);
+      } catch (e) {
+        Logger.log(`Error uploading image ${i + 1}: ${e.message}`);
+      }
+    }
+  }
+  
+  return {
+    folderUrl: dateFolder.getUrl(),
+    files: uploadedFiles
+  };
+}
+
+/**
+ * Show success message with links to generated files
+ */
+function showSuccessMessage(date, uploadResult) {
+  const ui = SpreadsheetApp.getUi();
+  
+  let message = `✅ Highlights generated successfully!\n\n`;
+  message += `Date: ${date}\n`;
+  message += `Total highlights: ${uploadResult.files.length} file(s)\n\n`;
+  message += `📁 Folder: ${uploadResult.folderUrl}\n\n`;
+  message += `Generated files:\n`;
+  
+  uploadResult.files.forEach((file, index) => {
+    message += `${index + 1}. ${file.name} (${file.type})\n`;
+  });
+  
+  message += `\nClick "Open Folder" to view all files.`;
+  
+  const response = ui.alert(
+    '✅ Success!',
+    message,
+    ui.ButtonSet.OK
+  );
+  
+  // Optionally open the folder
+  if (response === ui.Button.OK) {
+    // Note: Apps Script can't directly open URLs, but we can show it
+    const html = HtmlService.createHtmlOutput(`
+      <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+        <h3>✅ Highlights Generated!</h3>
+        <p>Click the link below to open the folder:</p>
+        <p><a href="${uploadResult.folderUrl}" target="_blank" style="font-size: 16px; color: #4285f4;">📁 Open Highlights Folder</a></p>
+        <br>
+        <button onclick="google.script.host.close()" style="padding: 10px 20px; font-size: 14px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+      </div>
+    `)
+      .setWidth(400)
+      .setHeight(200);
+    
+    ui.showModalDialog(html, 'Success');
+  }
+}
+
+/**
+ * Test connection to Firebase Function
+ */
+function testConnection() {
+  const ui = SpreadsheetApp.getUi();
+  
+  try {
+    ui.alert('Testing connection...', 'Please wait...', ui.ButtonSet.OK);
+    
+    const url = HIGHLIGHTS_CONFIG.FIREBASE_FUNCTION_URL;
+    const testPayload = {
+      spreadsheetId: HIGHLIGHTS_CONFIG.SPREADSHEET_ID,
+      sheetName: HIGHLIGHTS_CONFIG.SHEET_NAME,
+      date: new Date().toISOString().split('T')[0] // Today's date
+    };
+    
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(testPayload),
+      muteHttpExceptions: true,
+      timeout: 10000 // 10 seconds for test
+    };
+    
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    
+    if (responseCode === 200) {
+      ui.alert(
+        '✅ Connection Successful',
+        `Successfully connected to Firebase Function!\n\nURL: ${url}\n\nYou can now generate highlights.`,
+        ui.ButtonSet.OK
+      );
+    } else {
+      const responseText = response.getContentText();
+      ui.alert(
+        '⚠️ Connection Issue',
+        `HTTP ${responseCode}\n\n${responseText.substring(0, 200)}`,
+        ui.ButtonSet.OK
+      );
+    }
+  } catch (error) {
+    ui.alert(
+      '❌ Connection Failed',
+      `Error: ${error.message}\n\nPlease check:\n1. Firebase Function URL is correct\n2. Function is deployed\n3. You have internet connection`,
+      ui.ButtonSet.OK
+    );
+  }
+}
+
